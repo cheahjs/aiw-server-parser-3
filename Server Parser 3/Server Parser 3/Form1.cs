@@ -40,12 +40,12 @@ namespace Server_Parser_3
         Thread queryCheck;
         bool _favourites = false;
         ListViewItem selectedItem;
-        Queue _updateQueue = new Queue(2000); // Now I'm being lazy like NTAuthority, hardcoding a limit.
+        Queue _updateQueue = new Queue(2000);
         Filter _filter = new Filter();
-        int _version = 3;
-        int _started = 0;
-        int _startedinfo = 0;
+        int _version = 4;
         List<Thread> _runningThreads = new List<Thread>();
+        bool _abort = false;
+        public static List<Server> _searchServers = new List<Server>();
         #endregion
 
         #region Form Methods
@@ -103,6 +103,13 @@ namespace Server_Parser_3
                 backgroundWorker1.RunWorkerAsync(false);
             }
         }
+        private void stopBtn_Click(object sender, EventArgs e)
+        {
+            refreshBtn.Enabled = true;
+            stopBtn.Visible = false;
+            stopBtn.Enabled = false;
+            _abort = true;
+        }
         private void clearVariables()
         {
             listViewServer.Items.Clear();
@@ -115,17 +122,12 @@ namespace Server_Parser_3
             _queryDone = 0;
             _runningThreads.Clear();
             _filter = new Filter();
+            _abort = false;
+            _searchServers.Clear();
         }
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-            foreach(var thread in _runningThreads)
-            {
-                try
-                {
-                    thread.Abort();
-                }
-                catch {}
-            }
+            _abort = true;
             Process.GetCurrentProcess().Kill();
         }
 
@@ -145,7 +147,7 @@ namespace Server_Parser_3
             {
                 selectedItem = items[0];
                 var server = getServer(selectedItem.SubItems[1].Text.Split(':')[0], int.Parse(selectedItem.SubItems[1].Text.Split(':')[1]), false, true);
-                if (server.Dvars != null)
+                //if (server.Dvars != null)
                     displayData(server);
             }
         }
@@ -156,7 +158,7 @@ namespace Server_Parser_3
             {
                 selectedItem = items[0];
                 var server = getServer(selectedItem.SubItems[1].Text.Split(':')[0], int.Parse(selectedItem.SubItems[1].Text.Split(':')[1]), false, true);
-                if (server.Dvars != null)
+                //if (server.Dvars != null)
                     displayData(server);
             }
         }
@@ -164,6 +166,8 @@ namespace Server_Parser_3
         {
             listViewPlayers.Items.Clear();
             listViewDvars.Items.Clear();
+            if (server.Dvars == null)
+                return;
             foreach (var pair in server.Dvars)
             {
                 var item = listViewDvars.Items.Add(pair.Key);
@@ -319,6 +323,16 @@ namespace Server_Parser_3
                 }
             }
         }
+        private void searchPlayerToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            _searchServers = _respondedServers;
+            (new frmSearchPlayer()).ShowDialog();
+        }
+        private void searchPlayerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            _searchServers = _respondedServers;
+            (new frmSearchPlayer()).ShowDialog();
+        }
         #endregion
 
         #region Parse List
@@ -361,6 +375,9 @@ namespace Server_Parser_3
             //listViewServer.BeginUpdate();
             Thread thread = new Thread(new ThreadStart(startQuery));
             thread.Start();
+            _runningThreads.Add(thread);
+            stopBtn.Enabled = true;
+            stopBtn.Visible = true;
         }
         private void parseResponse(byte[] data)
         {
@@ -415,6 +432,8 @@ namespace Server_Parser_3
             _runningThreads.Add(update);
             foreach (var server in _servers)
             {
+                if (_abort)
+                    return;
                 Thread query = new Thread(new ParameterizedThreadStart(getStatus));
                 query.Start(server);
                 _runningThreads.Add(query);
@@ -422,12 +441,13 @@ namespace Server_Parser_3
         }
         private void getStatus(object arg)
         {
-            _started++;
             var server = (Server)arg;
             var failed = 0;
             var EP = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
+                if (_abort)
+                    return;
                 if (failed >= 5)
                 {
                     if (_favourites)
@@ -465,12 +485,13 @@ namespace Server_Parser_3
         }
         private void getInfo(object arg)
         {
-            _startedinfo++;
             var server = (Server)arg;
             var failed = 0;
             var EP = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
+                if (_abort)
+                    return;
                 if (failed >= 5)
                     break;
                 UdpClient client = new UdpClient();
@@ -995,6 +1016,8 @@ namespace Server_Parser_3
                     var previous = _queryDone;
                     while (_queryDone != count)
                     {
+                        if (_abort)
+                            break;
                         if ((DateTime.Now - started).Seconds >= 60)
                             break;
                         if (_queryDone != previous)
@@ -1020,6 +1043,8 @@ namespace Server_Parser_3
                 else
                 {
                     //listViewServer.EndUpdate();
+                    stopBtn.Enabled = false;
+                    stopBtn.Visible = false;
                     refreshBtn.Enabled = true;
                     if (_favourites)
                         toolStripStatusLabel1.Text = string.Format("Showing {0} out of {1} servers", listViewFav.Items.Count, _servers.Count);
@@ -1040,6 +1065,8 @@ namespace Server_Parser_3
         }
         private void updateStatus(object wut)
         {
+            if (_abort)
+                return;
             if (this.InvokeRequired)
                 try
                 {
@@ -1132,6 +1159,8 @@ namespace Server_Parser_3
             Queue queue = Queue.Synchronized(_updateQueue);
             while (true)
             {
+                if (_abort)
+                    return;
                 if (_updateQueue.Count > 0)
                 {
                     var data = (string[])queue.Dequeue();
@@ -1169,7 +1198,7 @@ namespace Server_Parser_3
     }
 
     #region Structs
-    struct Server
+    public struct Server
     {
         public string IP;
         public int Port;
@@ -1204,7 +1233,7 @@ namespace Server_Parser_3
             Ping = ping;
         }
     }
-    struct Player
+    public struct Player
     {
         public string Name;
         public int Score;
