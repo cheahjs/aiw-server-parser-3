@@ -42,7 +42,10 @@ namespace Server_Parser_3
         ListViewItem selectedItem;
         Queue _updateQueue = new Queue(2000); // Now I'm being lazy like NTAuthority, hardcoding a limit.
         Filter _filter = new Filter();
-        int _version = 2;
+        int _version = 3;
+        int _started = 0;
+        int _startedinfo = 0;
+        List<Thread> _runningThreads = new List<Thread>();
         #endregion
 
         #region Form Methods
@@ -110,10 +113,19 @@ namespace Server_Parser_3
             _respondedServers.Clear();
             _infoServers.Clear();
             _queryDone = 0;
+            _runningThreads.Clear();
             _filter = new Filter();
         }
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+            foreach(var thread in _runningThreads)
+            {
+                try
+                {
+                    thread.Abort();
+                }
+                catch {}
+            }
             Process.GetCurrentProcess().Kill();
         }
 
@@ -321,17 +333,21 @@ namespace Server_Parser_3
                     getservers[i] = 0xFF;
 
                 UdpClient client = new UdpClient("server.alteriw.net", 20810);
-                client.Client.ReceiveTimeout = 1000;
+                client.Client.ReceiveTimeout = 2000;
                 client.Send(getservers, getservers.Length);
                 while (true)
                 {
-                    var receivedata = client.Receive(ref EP);
-                    if (EP.Address.ToString() == "94.23.19.48")
+                    try
                     {
-                        parseResponse(receivedata);
-                        if (Encoding.UTF8.GetString(receivedata).Contains("EOT"))
-                            break;
+                        var receivedata = client.Receive(ref EP);
+                        if (EP.Address.ToString() == "94.23.19.48")
+                        {
+                            parseResponse(receivedata);
+                            if (Encoding.UTF8.GetString(receivedata).Contains("EOT"))
+                                break;
+                        }
                     }
+                    catch { break; }
                 }
             }
             else
@@ -393,29 +409,42 @@ namespace Server_Parser_3
             _filter = filter;
             queryCheck = new Thread(new ParameterizedThreadStart(checkQuery));
             queryCheck.Start(false);
+            _runningThreads.Add(queryCheck);
             var update = new Thread(new ThreadStart(checkUpdateQueue));
             update.Start();
+            _runningThreads.Add(update);
             foreach (var server in _servers)
             {
                 Thread query = new Thread(new ParameterizedThreadStart(getStatus));
                 query.Start(server);
+                _runningThreads.Add(query);
             }
         }
         private void getStatus(object arg)
         {
+            _started++;
             var server = (Server)arg;
             var failed = 0;
             var EP = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
+                if (failed >= 5)
+                {
+                    if (_favourites)
+                    {
+                        var queue = Queue.Synchronized(_updateQueue);
+                        queue.Enqueue(prepareItem(new Server(server.IP, server.Port, new List<Player>(), new Dictionary<string, string>(), new Dictionary<string, string>(), 999), true));
+                    }
+                    break;
+                }
                 UdpClient client = new UdpClient();
                 client.Client.ReceiveTimeout = 1000;
+                client.Client.SendTimeout = 1000;
+                client.Client.ExclusiveAddressUse = false;
                 try
                 {
                     client.Connect(server.IP, server.Port);
                     var now = DateTime.Now;
-                    if (failed >= 3)
-                        break;
                     client.Send(_getstatus, _getstatus.Length);
                     var data = Encoding.UTF8.GetString(client.Receive(ref EP));
                     parseQuery(data, EP.Address.ToString() + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
@@ -424,28 +453,34 @@ namespace Server_Parser_3
                 catch
                 {
                     client.Close();
-                    failed++;
                     //Thread.Sleep(100);
                 }
+                finally
+                {
+                    failed++;
+                }
+                failed++;
             }
             _queryDone++;
         }
         private void getInfo(object arg)
         {
+            _startedinfo++;
             var server = (Server)arg;
             var failed = 0;
             var EP = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
+                if (failed >= 5)
+                    break;
                 UdpClient client = new UdpClient();
                 client.Client.ReceiveTimeout = 1000;
+                client.Client.SendTimeout = 1000;
+                client.Client.ExclusiveAddressUse = false;
                 try
                 {
-
                     client.Connect(server.IP, server.Port);
                     var now = DateTime.Now;
-                    if (failed >= 3)
-                        break;
                     client.Send(_getinfo, _getinfo.Length);
                     var data = Encoding.UTF8.GetString(client.Receive(ref EP));
                     parseQuery(data, EP.Address.ToString() + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
@@ -454,9 +489,13 @@ namespace Server_Parser_3
                 catch
                 {
                     client.Close();
-                    failed++;
                     //Thread.Sleep(100);
                 }
+                finally
+                {
+                    failed++;
+                }
+                failed++;
             }
         }
         private void parseQuery(string data, string ip, int ping)
@@ -488,14 +527,14 @@ namespace Server_Parser_3
                 if (string.IsNullOrEmpty(server.IP))
                     return;
                 server.InfoDvars = dvars;
-                if (server.Ping == 0 && ping == 0)
+                if ((server.Ping == 0 && ping == 0) || (server.Ping == 1 && ping == 1))
                     server.Ping = 999;
-                else if (server.Ping == 0 && ping != 0)
+                else if ((server.Ping == 0 || server.Ping == 1) && ping != 0)
                     server.Ping = ping;
                 _infoServers.Add(server);
                 if (checkFilter(server))
                     //addItem(prepareItem(server));
-                    queue.Enqueue(prepareItem(server));
+                    queue.Enqueue(prepareItem(server, false));
             }
         }
         #endregion
@@ -607,7 +646,11 @@ namespace Server_Parser_3
         private void addItem(string[] data)
         {
             if (this.InvokeRequired)
-                this.Invoke(new ListViewDelegate(addItem), new object[] { data });
+                try
+                {
+                    this.Invoke(new ListViewDelegate(addItem), new object[] { data });
+                }
+                catch { }
             else
             {
                 ListViewItem item;
@@ -616,25 +659,41 @@ namespace Server_Parser_3
                 else
                     item = listViewServer.Items.Add(data[0]);
                 item.Name = data[1];
-                for (int i = 1; i < data.Length; i++)
+                if (data[data.Length - 1] == "true")
+                    item.BackColor = Color.Red;
+                for (int i = 1; i < (data.Length - 1); i++)
                     item.SubItems.Add(data[i]);
-                var shit = _queryDone;
                 //toolStripStatusLabel1.Text = string.Format("Queried {0} out of {1} servers", _queryDone.ToString(), _servers.Count.ToString());
                 //progressBar.Value = _queryDone;
             }
         }
-        private string[] prepareItem(Server server)
+        private string[] prepareItem(Server server, bool red)
         {
-            var data = new string[7];
-            data[0] = removeQuakeColorCodes(server.Dvars["sv_hostname"]);
-            data[1] = server.IP + ":" + server.Port.ToString();
-            data[2] = mapName(server.Dvars["mapname"]);
-            data[3] = getPlayerString(new string[] { server.InfoDvars["clients"], server.Dvars["sv_maxclients"], server.Dvars["sv_privateClients"], getValue(server.InfoDvars, "shortversion") });
-            data[4] = gameType(server.Dvars["g_gametype"]);
-            data[5] = getValue(server.Dvars, "fs_game");
-            if (data[5].StartsWith("mods"))
-                data[5] = data[5].Substring(5);
-            data[6] = server.Ping.ToString();
+            var data = new string[8];
+            if (!red)
+            {
+                data[0] = removeQuakeColorCodes(server.Dvars["sv_hostname"]);
+                data[1] = server.IP + ":" + server.Port.ToString();
+                data[2] = mapName(server.Dvars["mapname"]);
+                data[3] = getPlayerString(new string[] { server.InfoDvars["clients"], server.Dvars["sv_maxclients"], server.Dvars["sv_privateClients"], getValue(server.InfoDvars, "shortversion") });
+                data[4] = gameType(server.Dvars["g_gametype"]);
+                data[5] = getValue(server.Dvars, "fs_game");
+                if (data[5].StartsWith("mods"))
+                    data[5] = data[5].Substring(5);
+                data[6] = server.Ping.ToString();
+                data[7] = "false";
+            }
+            else
+            {
+                data[0] = "-----";
+                data[1] = server.IP + ":" + server.Port.ToString();
+                data[2] = "-----";
+                data[3] = "0/0(0)";
+                data[4] = "-----";
+                data[5] = "-----";
+                data[6] = "999";
+                data[7] = "true";
+            }
             return data;
         }
         #endregion
@@ -936,7 +995,7 @@ namespace Server_Parser_3
                     var previous = _queryDone;
                     while (_queryDone != count)
                     {
-                        if ((DateTime.Now - started).Seconds >= 45)
+                        if ((DateTime.Now - started).Seconds >= 60)
                             break;
                         if (_queryDone != previous)
                         {
@@ -953,7 +1012,11 @@ namespace Server_Parser_3
             else if (updatenow)
             {
                 if (this.InvokeRequired)
-                    this.Invoke(new InvokeDelegate(checkQuery), true);
+                    try
+                    {
+                        this.Invoke(new InvokeDelegate(checkQuery), true);
+                    }
+                    catch { }
                 else
                 {
                     //listViewServer.EndUpdate();
@@ -978,7 +1041,11 @@ namespace Server_Parser_3
         private void updateStatus(object wut)
         {
             if (this.InvokeRequired)
-                this.Invoke(new InvokeDelegate(updateStatus), true);
+                try
+                {
+                    this.Invoke(new InvokeDelegate(updateStatus), true);
+                }
+                catch { }
             else
             {
                 toolStripStatusLabel1.Text = string.Format("Queried {0} out of {1} servers", _queryDone, _servers.Count);
@@ -1050,7 +1117,11 @@ namespace Server_Parser_3
         private string getControlText(object box, ControlType type)
         {
             if (this.InvokeRequired)
-                return (string)this.Invoke(new ControlTextDelegate(getControlText), new object[] { box, type });
+                try
+                {
+                    return (string)this.Invoke(new ControlTextDelegate(getControlText), new object[] { box, type });
+                }
+                catch { return ""; }
             else
                 if (type == ControlType.Combobox)
                     return ((ComboBox)box).Text;
