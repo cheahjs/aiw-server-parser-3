@@ -66,6 +66,7 @@
             this.columnHeader18 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader19 = new System.Windows.Forms.ColumnHeader();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.webBrowser1 = new System.Windows.Forms.WebBrowser();
             this.label4 = new System.Windows.Forms.Label();
             this.playerFilter = new System.Windows.Forms.TextBox();
             this.v03Filter = new System.Windows.Forms.CheckBox();
@@ -94,8 +95,10 @@
             this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
-            this.webBrowser1 = new System.Windows.Forms.WebBrowser();
             this.addIPToFavouritesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stopBtn = new System.Windows.Forms.Button();
+            this.searchPlayerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.searchPlayerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -443,6 +446,7 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.stopBtn);
             this.groupBox2.Controls.Add(this.webBrowser1);
             this.groupBox2.Controls.Add(this.label4);
             this.groupBox2.Controls.Add(this.playerFilter);
@@ -466,6 +470,15 @@
             this.groupBox2.TabIndex = 3;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Filters";
+            // 
+            // webBrowser1
+            // 
+            this.webBrowser1.Location = new System.Drawing.Point(3, 313);
+            this.webBrowser1.MinimumSize = new System.Drawing.Size(20, 20);
+            this.webBrowser1.Name = "webBrowser1";
+            this.webBrowser1.Size = new System.Drawing.Size(20, 20);
+            this.webBrowser1.TabIndex = 18;
+            this.webBrowser1.Visible = false;
             // 
             // label4
             // 
@@ -646,9 +659,10 @@
             this.cmsServers.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.copyToolStripMenuItem,
             this.connectToolStripMenuItem,
-            this.addToFavouritesToolStripMenuItem});
+            this.addToFavouritesToolStripMenuItem,
+            this.searchPlayerToolStripMenuItem1});
             this.cmsServers.Name = "cmsServers";
-            this.cmsServers.Size = new System.Drawing.Size(168, 70);
+            this.cmsServers.Size = new System.Drawing.Size(168, 92);
             // 
             // copyToolStripMenuItem
             // 
@@ -699,9 +713,10 @@
             this.toolStripMenuItem1,
             this.toolStripMenuItem4,
             this.toolStripMenuItem5,
-            this.addIPToFavouritesToolStripMenuItem});
+            this.addIPToFavouritesToolStripMenuItem,
+            this.searchPlayerToolStripMenuItem});
             this.cmsFav.Name = "cmsServers";
-            this.cmsFav.Size = new System.Drawing.Size(204, 92);
+            this.cmsFav.Size = new System.Drawing.Size(204, 136);
             // 
             // toolStripMenuItem1
             // 
@@ -715,14 +730,14 @@
             // toolStripMenuItem2
             // 
             this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(152, 22);
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(134, 22);
             this.toolStripMenuItem2.Text = "IP";
             this.toolStripMenuItem2.Click += new System.EventHandler(this.toolStripMenuItem2_Click);
             // 
             // toolStripMenuItem3
             // 
             this.toolStripMenuItem3.Name = "toolStripMenuItem3";
-            this.toolStripMenuItem3.Size = new System.Drawing.Size(152, 22);
+            this.toolStripMenuItem3.Size = new System.Drawing.Size(134, 22);
             this.toolStripMenuItem3.Text = "Host Name";
             this.toolStripMenuItem3.Click += new System.EventHandler(this.toolStripMenuItem3_Click);
             // 
@@ -740,21 +755,39 @@
             this.toolStripMenuItem5.Text = "Remove from Favourites";
             this.toolStripMenuItem5.Click += new System.EventHandler(this.toolStripMenuItem5_Click);
             // 
-            // webBrowser1
-            // 
-            this.webBrowser1.Location = new System.Drawing.Point(3, 313);
-            this.webBrowser1.MinimumSize = new System.Drawing.Size(20, 20);
-            this.webBrowser1.Name = "webBrowser1";
-            this.webBrowser1.Size = new System.Drawing.Size(20, 20);
-            this.webBrowser1.TabIndex = 18;
-            this.webBrowser1.Visible = false;
-            // 
             // addIPToFavouritesToolStripMenuItem
             // 
             this.addIPToFavouritesToolStripMenuItem.Name = "addIPToFavouritesToolStripMenuItem";
             this.addIPToFavouritesToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
             this.addIPToFavouritesToolStripMenuItem.Text = "Add IP to Favourites";
             this.addIPToFavouritesToolStripMenuItem.Click += new System.EventHandler(this.addIPToFavouritesToolStripMenuItem_Click);
+            // 
+            // stopBtn
+            // 
+            this.stopBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.stopBtn.Enabled = false;
+            this.stopBtn.Location = new System.Drawing.Point(93, 310);
+            this.stopBtn.Name = "stopBtn";
+            this.stopBtn.Size = new System.Drawing.Size(75, 23);
+            this.stopBtn.TabIndex = 19;
+            this.stopBtn.Text = "Stop";
+            this.stopBtn.UseVisualStyleBackColor = true;
+            this.stopBtn.Visible = false;
+            this.stopBtn.Click += new System.EventHandler(this.stopBtn_Click);
+            // 
+            // searchPlayerToolStripMenuItem
+            // 
+            this.searchPlayerToolStripMenuItem.Name = "searchPlayerToolStripMenuItem";
+            this.searchPlayerToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
+            this.searchPlayerToolStripMenuItem.Text = "Search Player";
+            this.searchPlayerToolStripMenuItem.Click += new System.EventHandler(this.searchPlayerToolStripMenuItem_Click);
+            // 
+            // searchPlayerToolStripMenuItem1
+            // 
+            this.searchPlayerToolStripMenuItem1.Name = "searchPlayerToolStripMenuItem1";
+            this.searchPlayerToolStripMenuItem1.Size = new System.Drawing.Size(167, 22);
+            this.searchPlayerToolStripMenuItem1.Text = "Search Player";
+            this.searchPlayerToolStripMenuItem1.Click += new System.EventHandler(this.searchPlayerToolStripMenuItem1_Click);
             // 
             // Form1
             // 
@@ -862,6 +895,9 @@
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem5;
         private System.Windows.Forms.WebBrowser webBrowser1;
         private System.Windows.Forms.ToolStripMenuItem addIPToFavouritesToolStripMenuItem;
+        private System.Windows.Forms.Button stopBtn;
+        private System.Windows.Forms.ToolStripMenuItem searchPlayerToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem searchPlayerToolStripMenuItem;
     }
 }
 
