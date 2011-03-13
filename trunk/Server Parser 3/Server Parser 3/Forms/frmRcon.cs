@@ -39,6 +39,7 @@ namespace Server_Parser_3.Forms
                 {
                     txtOutput.Text += "]" + _command + Environment.NewLine;
                     txtOutput.Text += sendPacket() + Environment.NewLine;
+                    txtCommand.Text = "";
                 }
                 else
                     txtOutput.Text += "Password and/or Command cannot be empty!" + Environment.NewLine;
@@ -52,7 +53,12 @@ namespace Server_Parser_3.Forms
                 button1_Click(this, null);
                 e.Handled = true;
             }
-        }   
+        }
+        private void txtOutput_TextChanged(object sender, EventArgs e)
+        {
+            txtOutput.SelectionStart = txtOutput.Text.Length;
+            txtOutput.ScrollToCaret();
+        }
         #endregion
 
         #region Send RCON
@@ -81,11 +87,26 @@ namespace Server_Parser_3.Forms
         private string parseRcon(string data)
         {
             if (data.Substring(4).StartsWith("print"))
-            {
-                return data.Substring(4).Substring(6).Replace("\n", Environment.NewLine);
-            }
+                return removeWhiteQuakeColorCodes(data.Substring(4).Substring(6).Replace("\n", Environment.NewLine));
             else
                 return data;
+        }
+        #endregion
+
+        #region Misc Methods
+        public string removeWhiteQuakeColorCodes(string remove)
+        {
+            string filteredout = "";
+            var array = remove.Split('^');
+            filteredout += array[0];
+            for (int i = 1; i < array.Length; i++)
+            {
+                if (array[i].StartsWith("7\""))
+                    filteredout += array[i].Substring(1);
+                else
+                    filteredout += "^" + array[i];
+            }
+            return filteredout;
         }
         #endregion
     }
