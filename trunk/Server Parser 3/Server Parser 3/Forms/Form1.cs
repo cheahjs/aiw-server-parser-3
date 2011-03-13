@@ -42,7 +42,7 @@ namespace Server_Parser_3
         ListViewItem selectedItem;
         Queue _updateQueue = new Queue(2000);
         Filter _filter = new Filter();
-        int _version = 4;
+        int _version = 5;
         List<Thread> _runningThreads = new List<Thread>();
         bool _abort = false;
         public static List<Server> _searchServers = new List<Server>();
@@ -83,6 +83,9 @@ namespace Server_Parser_3
                 typeof(ListViewTextCaseInsensitiveSort),
                 typeof(ListViewTextCaseInsensitiveSort) });
             new Thread(new ThreadStart(checkNewest)).Start();
+            //Log.Initialize("serverparser3.log", LogLevel.All, true);
+            Log.Debug("getinfo : " + Encoding.UTF8.GetString(_getinfo));
+            Log.Debug("getstatus : " + Encoding.UTF8.GetString(_getstatus));
         }
         private void refreshBtn_Click(object sender, EventArgs e)
         {
@@ -92,12 +95,14 @@ namespace Server_Parser_3
             m_sortMgr2.SortEnabled = false;
             if (tabControl1.SelectedIndex == 0)
             {
+                Log.Info("Starting to query master server");
                 toolStripStatusLabel1.Text = "Querying master server";
                 _favourites = false;
                 backgroundWorker1.RunWorkerAsync(true);
             }
             else
             {
+                Log.Info("Starting to query favourites");
                 toolStripStatusLabel1.Text = "Querying favourite servers";
                 _favourites = true;
                 backgroundWorker1.RunWorkerAsync(false);
@@ -109,6 +114,7 @@ namespace Server_Parser_3
             stopBtn.Visible = false;
             stopBtn.Enabled = false;
             _abort = true;
+            Log.Info("Stop button pressed");
         }
         private void clearVariables()
         {
@@ -128,6 +134,8 @@ namespace Server_Parser_3
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             _abort = true;
+            Environment.FailFast(null);
+            Environment.Exit(1337);
             Process.GetCurrentProcess().Kill();
         }
 
@@ -200,6 +208,8 @@ namespace Server_Parser_3
                     toolStripMenuItem3.Enabled = true;
                     toolStripMenuItem4.Enabled = true;
                     toolStripMenuItem5.Enabled = true;
+                    searchPlayerToolStripMenuItem.Enabled = true;
+                    rCONToolToolStripMenuItem1.Enabled = true;
                     cmsFav.Show(this, e.X, e.Y);
                 }
                 else
@@ -209,6 +219,8 @@ namespace Server_Parser_3
                     toolStripMenuItem3.Enabled = false;
                     toolStripMenuItem4.Enabled = false;
                     toolStripMenuItem5.Enabled = false;
+                    searchPlayerToolStripMenuItem.Enabled = false;
+                    rCONToolToolStripMenuItem1.Enabled = false;
                     cmsFav.Show(this, e.X, e.Y);
                 }
             }
@@ -333,6 +345,18 @@ namespace Server_Parser_3
             _searchServers = _respondedServers;
             (new frmSearchPlayer()).ShowDialog();
         }
+        private void rCONToolToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var frm = new Forms.frmRcon();
+            frm.IP = selectedItem.SubItems[1].Text;
+            frm.Show();
+        }
+        private void rCONToolToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            var frm = new Forms.frmRcon();
+            frm.IP = selectedItem.SubItems[1].Text;
+            frm.Show();
+        }
         #endregion
 
         #region Parse List
@@ -345,7 +369,8 @@ namespace Server_Parser_3
                 var getservers = Encoding.UTF8.GetBytes("    getservers IW4 142 full empty");
                 for (int i = 0; i < 4; i++)
                     getservers[i] = 0xFF;
-
+                Log.Debug("getservers : " + Encoding.UTF8.GetString(getservers));
+                
                 UdpClient client = new UdpClient("server.alteriw.net", 20810);
                 client.Client.ReceiveTimeout = 2000;
                 client.Send(getservers, getservers.Length);
@@ -356,12 +381,13 @@ namespace Server_Parser_3
                         var receivedata = client.Receive(ref EP);
                         if (EP.Address.ToString() == "94.23.19.48")
                         {
+                            Log.Debug("Received data from master server\n" + Encoding.UTF8.GetString(receivedata));
                             parseResponse(receivedata);
                             if (Encoding.UTF8.GetString(receivedata).Contains("EOT"))
                                 break;
                         }
                     }
-                    catch { break; }
+                    catch { Log.Error(e.ToString()); break; }
                 }
             }
             else
@@ -373,6 +399,7 @@ namespace Server_Parser_3
             progressBar.Maximum = _servers.Count;
             toolStripStatusLabel1.Text = string.Format("Queried 0 out of {0} servers", _servers.Count);
             //listViewServer.BeginUpdate();
+            Log.Info(string.Format("Started to query {0} servers", _servers.Count));
             Thread thread = new Thread(new ThreadStart(startQuery));
             thread.Start();
             _runningThreads.Add(thread);
@@ -435,6 +462,7 @@ namespace Server_Parser_3
                 if (_abort)
                     return;
                 Thread query = new Thread(new ParameterizedThreadStart(getStatus));
+                //Thread query = new Thread(new ParameterizedThreadStart(getInfo));
                 query.Start(server);
                 _runningThreads.Add(query);
             }
@@ -467,11 +495,13 @@ namespace Server_Parser_3
                     var now = DateTime.Now;
                     client.Send(_getstatus, _getstatus.Length);
                     var data = Encoding.UTF8.GetString(client.Receive(ref EP));
+                    Log.Debug(EP.ToString() + " returned getstatus request\n" + data);
                     parseQuery(data, EP.Address.ToString() + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
                     break;
                 }
-                catch
+                catch (Exception e)
                 {
+                    Log.Error(e.ToString());
                     client.Close();
                     //Thread.Sleep(100);
                 }
@@ -504,11 +534,13 @@ namespace Server_Parser_3
                     var now = DateTime.Now;
                     client.Send(_getinfo, _getinfo.Length);
                     var data = Encoding.UTF8.GetString(client.Receive(ref EP));
+                    Log.Debug(EP.ToString() + " returned getinfo request\n" + data);
                     parseQuery(data, EP.Address.ToString() + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
                     break;
                 }
-                catch
+                catch (Exception e)
                 {
+                    Log.Error(e.ToString());
                     client.Close();
                     //Thread.Sleep(100);
                 }
@@ -696,6 +728,7 @@ namespace Server_Parser_3
                 data[0] = removeQuakeColorCodes(server.Dvars["sv_hostname"]);
                 data[1] = server.IP + ":" + server.Port.ToString();
                 data[2] = mapName(server.Dvars["mapname"]);
+                //data[2] = mapName(server.InfoDvars["mapname"]);
                 data[3] = getPlayerString(new string[] { server.InfoDvars["clients"], server.Dvars["sv_maxclients"], server.Dvars["sv_privateClients"], getValue(server.InfoDvars, "shortversion") });
                 data[4] = gameType(server.Dvars["g_gametype"]);
                 data[5] = getValue(server.Dvars, "fs_game");
@@ -740,8 +773,9 @@ namespace Server_Parser_3
                         server.Port = int.Parse(line.Split(':')[1]);
                         _servers.Add(server);
                     }
-                    catch
+                    catch (Exception e)
                     {
+                        Log.Error(e.ToString());
                     }
                 }
             }
@@ -1019,7 +1053,10 @@ namespace Server_Parser_3
                         if (_abort)
                             break;
                         if ((DateTime.Now - started).Seconds >= 60)
+                        {
+                            Log.Warn("60 seconds passed, forcing queries to stop");
                             break;
+                        }
                         if (_queryDone != previous)
                         {
                             updateStatus(false); previous = _queryDone;
@@ -1076,6 +1113,7 @@ namespace Server_Parser_3
             else
             {
                 toolStripStatusLabel1.Text = string.Format("Queried {0} out of {1} servers", _queryDone, _servers.Count);
+                Log.Debug(string.Format("Query done : {0}", _queryDone));
                 if (_queryDone <= progressBar.Maximum)
                     progressBar.Value = _queryDone;
                 else

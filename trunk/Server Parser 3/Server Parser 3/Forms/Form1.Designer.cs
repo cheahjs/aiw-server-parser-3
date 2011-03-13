@@ -66,6 +66,7 @@
             this.columnHeader18 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader19 = new System.Windows.Forms.ColumnHeader();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.stopBtn = new System.Windows.Forms.Button();
             this.webBrowser1 = new System.Windows.Forms.WebBrowser();
             this.label4 = new System.Windows.Forms.Label();
             this.playerFilter = new System.Windows.Forms.TextBox();
@@ -88,6 +89,7 @@
             this.hostNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.connectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addToFavouritesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.searchPlayerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.cmsFav = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
@@ -96,9 +98,9 @@
             this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
             this.addIPToFavouritesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.stopBtn = new System.Windows.Forms.Button();
             this.searchPlayerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.searchPlayerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.rCONToolToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.rCONToolToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -471,6 +473,19 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Filters";
             // 
+            // stopBtn
+            // 
+            this.stopBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.stopBtn.Enabled = false;
+            this.stopBtn.Location = new System.Drawing.Point(93, 310);
+            this.stopBtn.Name = "stopBtn";
+            this.stopBtn.Size = new System.Drawing.Size(75, 23);
+            this.stopBtn.TabIndex = 19;
+            this.stopBtn.Text = "Stop";
+            this.stopBtn.UseVisualStyleBackColor = true;
+            this.stopBtn.Visible = false;
+            this.stopBtn.Click += new System.EventHandler(this.stopBtn_Click);
+            // 
             // webBrowser1
             // 
             this.webBrowser1.Location = new System.Drawing.Point(3, 313);
@@ -660,9 +675,10 @@
             this.copyToolStripMenuItem,
             this.connectToolStripMenuItem,
             this.addToFavouritesToolStripMenuItem,
-            this.searchPlayerToolStripMenuItem1});
+            this.searchPlayerToolStripMenuItem1,
+            this.rCONToolToolStripMenuItem});
             this.cmsServers.Name = "cmsServers";
-            this.cmsServers.Size = new System.Drawing.Size(168, 92);
+            this.cmsServers.Size = new System.Drawing.Size(168, 114);
             // 
             // copyToolStripMenuItem
             // 
@@ -701,6 +717,13 @@
             this.addToFavouritesToolStripMenuItem.Text = "Add to Favourites";
             this.addToFavouritesToolStripMenuItem.Click += new System.EventHandler(this.addToFavouritesToolStripMenuItem_Click);
             // 
+            // searchPlayerToolStripMenuItem1
+            // 
+            this.searchPlayerToolStripMenuItem1.Name = "searchPlayerToolStripMenuItem1";
+            this.searchPlayerToolStripMenuItem1.Size = new System.Drawing.Size(167, 22);
+            this.searchPlayerToolStripMenuItem1.Text = "Search Player";
+            this.searchPlayerToolStripMenuItem1.Click += new System.EventHandler(this.searchPlayerToolStripMenuItem1_Click);
+            // 
             // backgroundWorker1
             // 
             this.backgroundWorker1.WorkerReportsProgress = true;
@@ -714,9 +737,10 @@
             this.toolStripMenuItem4,
             this.toolStripMenuItem5,
             this.addIPToFavouritesToolStripMenuItem,
-            this.searchPlayerToolStripMenuItem});
+            this.searchPlayerToolStripMenuItem,
+            this.rCONToolToolStripMenuItem1});
             this.cmsFav.Name = "cmsServers";
-            this.cmsFav.Size = new System.Drawing.Size(204, 136);
+            this.cmsFav.Size = new System.Drawing.Size(204, 158);
             // 
             // toolStripMenuItem1
             // 
@@ -762,19 +786,6 @@
             this.addIPToFavouritesToolStripMenuItem.Text = "Add IP to Favourites";
             this.addIPToFavouritesToolStripMenuItem.Click += new System.EventHandler(this.addIPToFavouritesToolStripMenuItem_Click);
             // 
-            // stopBtn
-            // 
-            this.stopBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.stopBtn.Enabled = false;
-            this.stopBtn.Location = new System.Drawing.Point(93, 310);
-            this.stopBtn.Name = "stopBtn";
-            this.stopBtn.Size = new System.Drawing.Size(75, 23);
-            this.stopBtn.TabIndex = 19;
-            this.stopBtn.Text = "Stop";
-            this.stopBtn.UseVisualStyleBackColor = true;
-            this.stopBtn.Visible = false;
-            this.stopBtn.Click += new System.EventHandler(this.stopBtn_Click);
-            // 
             // searchPlayerToolStripMenuItem
             // 
             this.searchPlayerToolStripMenuItem.Name = "searchPlayerToolStripMenuItem";
@@ -782,12 +793,19 @@
             this.searchPlayerToolStripMenuItem.Text = "Search Player";
             this.searchPlayerToolStripMenuItem.Click += new System.EventHandler(this.searchPlayerToolStripMenuItem_Click);
             // 
-            // searchPlayerToolStripMenuItem1
+            // rCONToolToolStripMenuItem
             // 
-            this.searchPlayerToolStripMenuItem1.Name = "searchPlayerToolStripMenuItem1";
-            this.searchPlayerToolStripMenuItem1.Size = new System.Drawing.Size(167, 22);
-            this.searchPlayerToolStripMenuItem1.Text = "Search Player";
-            this.searchPlayerToolStripMenuItem1.Click += new System.EventHandler(this.searchPlayerToolStripMenuItem1_Click);
+            this.rCONToolToolStripMenuItem.Name = "rCONToolToolStripMenuItem";
+            this.rCONToolToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
+            this.rCONToolToolStripMenuItem.Text = "RCON Tool";
+            this.rCONToolToolStripMenuItem.Click += new System.EventHandler(this.rCONToolToolStripMenuItem_Click);
+            // 
+            // rCONToolToolStripMenuItem1
+            // 
+            this.rCONToolToolStripMenuItem1.Name = "rCONToolToolStripMenuItem1";
+            this.rCONToolToolStripMenuItem1.Size = new System.Drawing.Size(203, 22);
+            this.rCONToolToolStripMenuItem1.Text = "RCON Tool";
+            this.rCONToolToolStripMenuItem1.Click += new System.EventHandler(this.rCONToolToolStripMenuItem1_Click);
             // 
             // Form1
             // 
@@ -898,6 +916,8 @@
         private System.Windows.Forms.Button stopBtn;
         private System.Windows.Forms.ToolStripMenuItem searchPlayerToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem searchPlayerToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem rCONToolToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem rCONToolToolStripMenuItem1;
     }
 }
 
