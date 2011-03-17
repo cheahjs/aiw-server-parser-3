@@ -143,9 +143,10 @@ namespace Server_Parser_3
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             _abort = true;
-            Environment.FailFast(null);
+            Thread.Sleep(1000);
+            //Environment.FailFast(null);
             Environment.Exit(1337);
-            Process.GetCurrentProcess().Kill();
+            //Process.GetCurrentProcess().Kill();
         }
         private void listViewServer_MouseDown(object sender, MouseEventArgs e)
         {
@@ -946,7 +947,6 @@ namespace Server_Parser_3
                         Thread.Sleep(35);
                     }
                 }
-
             }
             Process.Start("aiw://connect/" + ip);
         }
