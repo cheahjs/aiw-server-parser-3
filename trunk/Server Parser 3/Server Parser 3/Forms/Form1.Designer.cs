@@ -90,6 +90,7 @@
             this.connectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addToFavouritesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchPlayerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.rCONToolToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.cmsFav = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
@@ -99,7 +100,6 @@
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
             this.addIPToFavouritesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchPlayerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.rCONToolToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rCONToolToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -724,6 +724,13 @@
             this.searchPlayerToolStripMenuItem1.Text = "Search Player";
             this.searchPlayerToolStripMenuItem1.Click += new System.EventHandler(this.searchPlayerToolStripMenuItem1_Click);
             // 
+            // rCONToolToolStripMenuItem
+            // 
+            this.rCONToolToolStripMenuItem.Name = "rCONToolToolStripMenuItem";
+            this.rCONToolToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
+            this.rCONToolToolStripMenuItem.Text = "RCON Tool";
+            this.rCONToolToolStripMenuItem.Click += new System.EventHandler(this.rCONToolToolStripMenuItem_Click);
+            // 
             // backgroundWorker1
             // 
             this.backgroundWorker1.WorkerReportsProgress = true;
@@ -740,7 +747,7 @@
             this.searchPlayerToolStripMenuItem,
             this.rCONToolToolStripMenuItem1});
             this.cmsFav.Name = "cmsServers";
-            this.cmsFav.Size = new System.Drawing.Size(204, 158);
+            this.cmsFav.Size = new System.Drawing.Size(204, 136);
             // 
             // toolStripMenuItem1
             // 
@@ -793,13 +800,6 @@
             this.searchPlayerToolStripMenuItem.Text = "Search Player";
             this.searchPlayerToolStripMenuItem.Click += new System.EventHandler(this.searchPlayerToolStripMenuItem_Click);
             // 
-            // rCONToolToolStripMenuItem
-            // 
-            this.rCONToolToolStripMenuItem.Name = "rCONToolToolStripMenuItem";
-            this.rCONToolToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
-            this.rCONToolToolStripMenuItem.Text = "RCON Tool";
-            this.rCONToolToolStripMenuItem.Click += new System.EventHandler(this.rCONToolToolStripMenuItem_Click);
-            // 
             // rCONToolToolStripMenuItem1
             // 
             this.rCONToolToolStripMenuItem1.Name = "rCONToolToolStripMenuItem1";
@@ -819,6 +819,7 @@
             this.Name = "Form1";
             this.Text = "aIW Server Parser 3";
             this.Load += new System.EventHandler(this.Form1_Load);
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
             this.splitContainer1.Panel1.ResumeLayout(false);

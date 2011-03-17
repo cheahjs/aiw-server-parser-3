@@ -42,10 +42,12 @@ namespace Server_Parser_3
         ListViewItem selectedItem;
         Queue _updateQueue = new Queue(2000);
         Filter _filter = new Filter();
-        int _version = 5;
+        int _version = 6;
         List<Thread> _runningThreads = new List<Thread>();
         bool _abort = false;
         public static List<Server> _searchServers = new List<Server>();
+        byte[] _hping = { 0xFF, 0xFF, 0xFF, 0XFF, 0x30, 0x68, 0x70, 0x69, 0x6e, 0x67 };
+        bool _autoretry = false;
         #endregion
 
         #region Form Methods
@@ -133,12 +135,18 @@ namespace Server_Parser_3
         }
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+            /*_abort = true;
+            Environment.FailFast(null);
+            Environment.Exit(1337);
+            Process.GetCurrentProcess().Kill();*/
+        }
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
             _abort = true;
             Environment.FailFast(null);
             Environment.Exit(1337);
             Process.GetCurrentProcess().Kill();
         }
-
         private void listViewServer_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
@@ -236,7 +244,7 @@ namespace Server_Parser_3
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
-                new Thread(new ParameterizedThreadStart(connectIP)).Start(selectedItem.SubItems[1].Text);
+                new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] { selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
         }
         private void iPToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -263,7 +271,7 @@ namespace Server_Parser_3
         private void toolStripMenuItem4_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
-                new Thread(new ParameterizedThreadStart(connectIP)).Start(selectedItem.SubItems[1].Text);
+                new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] { selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
         }
 
         private void toolStripMenuItem5_Click(object sender, EventArgs e)
@@ -278,7 +286,7 @@ namespace Server_Parser_3
         {
             if (e.Button == MouseButtons.Left)
                 if (selectedItem != null)
-                    new Thread(new ParameterizedThreadStart(connectIP)).Start(selectedItem.SubItems[1].Text);
+                    new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] { selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
         }
         private void listViewServer_KeyDown(object sender, KeyEventArgs e)
         {
@@ -292,7 +300,7 @@ namespace Server_Parser_3
         {
             if (e.Button == MouseButtons.Left)
                 if (selectedItem != null)
-                    new Thread(new ParameterizedThreadStart(connectIP)).Start(selectedItem.SubItems[1].Text);
+                    new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
         }
         private void listViewFav_KeyDown(object sender, KeyEventArgs e)
         {
@@ -513,6 +521,7 @@ namespace Server_Parser_3
             }
             _queryDone++;
         }
+        
         private void getInfo(object arg)
         {
             var server = (Server)arg;
@@ -550,6 +559,47 @@ namespace Server_Parser_3
                 }
                 failed++;
             }
+        }
+        private HPong hping(Server server)
+        {
+            var failed = 0;
+            var EP = new IPEndPoint(IPAddress.Any, 0);
+            HPong returned = new HPong();
+            while (true)
+            {
+                if (_abort)
+                    return returned;
+                if (failed >= 5)
+                    break;
+                UdpClient client = new UdpClient();
+                client.Client.ReceiveTimeout = 1000;
+                client.Client.SendTimeout = 1000;
+                client.Client.ExclusiveAddressUse = false;
+                try
+                {
+                    client.Connect(server.IP, server.Port);
+                    client.Send(_getinfo, _getinfo.Length);
+                    var data = Encoding.UTF8.GetString(client.Receive(ref EP));
+                    Log.Debug(EP.ToString() + " returned hping request\n" + data);
+
+                    var data2 = data.Split(' ');
+                    returned.InGame = (data2[3] == "1");
+                    returned.CurrentPlayers = int.Parse(data2[4]);
+                    returned.MaxPlayers = int.Parse(data2[5]);
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Log.Error(e.ToString());
+                    client.Close();
+                }
+                finally
+                {
+                    failed++;
+                }
+                failed++;
+            }
+            return returned;
         }
         private void parseQuery(string data, string ip, int ping)
         {
@@ -668,13 +718,13 @@ namespace Server_Parser_3
             else if (state == CheckState.Checked)
                 if (string.IsNullOrEmpty(shortversion))
                     return false;
-                else if (shortversion.StartsWith("0.3"))
+                else if (shortversion.StartsWith("0.3") || shortversion.StartsWith("0.4"))
                     return true;
                 else return false;
             else
                 if (string.IsNullOrEmpty(shortversion))
                     return true;
-                else if (shortversion.StartsWith("0.3"))
+                else if (shortversion.StartsWith("0.3") || shortversion.StartsWith("0.4"))
                     return false;
                 else return true;
         }
@@ -825,6 +875,80 @@ namespace Server_Parser_3
             catch
             {
             }
+        }
+        #endregion
+
+        #region Update Form
+        private void updateLabel(object text)
+        {
+            if (this.InvokeRequired)
+                this.Invoke(new InvokeDelegate(updateLabel), text);
+            else
+            {
+                var text2 = (string)text;
+                toolStripStatusLabel1.Text = text2;
+            }
+        }
+        #endregion
+
+        #region Connect
+        private void connectIP(object data)
+        {
+            var strData = (string[])data;
+            var ip = strData[0];
+            var players = strData[1];
+            var server = getServer(ip.Split(':')[0], int.Parse(ip.Split(':')[1]), false, true);
+            var v03 = check03(getValue(server.InfoDvars, "shortversion"), CheckState.Checked);
+            if (_autoretry)
+            {
+                if (MessageBox.Show("A previous connect attempt is still ongoing!\nDo you wish to cancel the previous attempt?", "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
+                    _autoretry = false;
+                else
+                    return;
+            }
+            if (players != "-----")
+            {
+                var clients = int.Parse(players.Split('/')[0]);
+                var publicmax = int.Parse(players.Split('/')[1].Split('(')[0]);
+                if (clients >= publicmax)
+                {
+                    _autoretry = true;
+                    var result = MessageBox.Show("The server you are trying to join is currently full.\nDo you wish to abort, ignore this warning, or attempt to join when theres a free slot?", "aIW Server Parser 3",
+                        MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Warning);
+                    if (result == DialogResult.Abort)
+                        return;
+                    else if (result == DialogResult.Ignore) { }
+                    else if (result == DialogResult.Retry)
+                    {
+                        Server server2 = new Server();
+                        server2.IP = ip.Split(':')[0];
+                        server2.Port = int.Parse(ip.Split(':')[1]);
+                        updateLabel("Currently attempting connect to " + ip);
+                        while (_autoretry)
+                        {
+                            var response = hping(server2);
+                            if (response.CurrentPlayers < response.MaxPlayers)
+                                break;
+                            Thread.Sleep(3000);
+                        }
+                        updateLabel(string.Format("Free slot found at {0}, connecting...", ip));
+                    }
+                }
+            }
+            if (Process.GetProcessesByName("iw4mp.dat").Count() == 0)
+            {
+                if (v03)
+                {
+                    if (MessageBox.Show("The server you are joining is a server running v0.3b or higher.\nAttempting to immediately connect will result in a Steam Authentication Failed kick.\nDo you wish to wait 35 seconds or immediately connect?",
+                        "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                    {
+                        Process.Start("aiw://connect/deathmax'sserverparser:65540");
+                        Thread.Sleep(35);
+                    }
+                }
+
+            }
+            Process.Start("aiw://connect/" + ip);
         }
         #endregion
 
@@ -1208,30 +1332,6 @@ namespace Server_Parser_3
                     break;
             }
         }
-        private void connectIP(object IP)
-        {
-            var ip = (string)IP;
-            /*long XUID = 0;
-            try
-            {
-                XUID = (0x0110000100000000 | new XUID().GetSteamID());
-            }
-            catch
-            { }
-            WebClient wc = new WebClient();
-            var response = wc.DownloadString("http://server.alteriw.net:13000/clean/" + XUID.ToString());
-            if (response == "valid")
-                Process.Start("aiw://connect/" + ip);
-            else
-                if (MessageBox.Show("Your XUID(" + XUID.ToString("X15") + ") is unclean.\nDo you still wish to continue?", "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation) == DialogResult.Yes)
-                    Process.Start("aiw://connect/" + ip);*/
-            if (Process.GetProcessesByName("iw4mp.dat").Count() == 0)
-            {
-                Process.Start("aiw://connect/deathmax'sserverparser:65540");
-                Thread.Sleep(35);
-            }
-            Process.Start("aiw://connect/" + ip);
-        }
         #endregion
     }
 
@@ -1318,6 +1418,19 @@ namespace Server_Parser_3
             Full = true;
             Empty = true;
             v03 = CheckState.Indeterminate;
+        }
+    }
+    struct HPong
+    {
+        public bool InGame;
+        public int CurrentPlayers;
+        public int MaxPlayers;
+
+        public HPong(bool ingame)
+        {
+            InGame = ingame;
+            CurrentPlayers = 0;
+            MaxPlayers = 0;
         }
     }
     #endregion
