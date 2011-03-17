@@ -126,15 +126,57 @@ namespace Server_Parser_3
             }
             return filteredout.Substring(1);
         }
-        private void connectIP(object IP)
+        private void connectIP(object data)
         {
-            var ip = (string)IP;
+            var strData = (string)data;
+            var ip = strData;
+            var server = getServer(ip.Split(':')[0], int.Parse(ip.Split(':')[1]));
+            var v03 = check03(getValue(server.InfoDvars, "shortversion"), CheckState.Checked);
             if (Process.GetProcessesByName("iw4mp.dat").Count() == 0)
             {
-                Process.Start("aiw://connect/deathmax'sserverparser:65540");
-                Thread.Sleep(35);
+                if (v03)
+                {
+                    if (MessageBox.Show("The server you are joining is a server running v0.3b or higher.\nAttempting to immediately connect will result in a Steam Authentication Failed kick.\nDo you wish to wait 35 seconds or immediately connect?",
+                        "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                    {
+                        Process.Start("aiw://connect/deathmax'sserverparser:65540");
+                        Thread.Sleep(35);
+                    }
+                }
+
             }
             Process.Start("aiw://connect/" + ip);
+        }
+        private Server getServer(string IP, int port)
+        {
+            var servers = _search;
+            var server = new Server();
+            for (int i = 0; i < servers.Count; i++)
+            {
+                if (servers[i].IP == IP && servers[i].Port == port)
+                {
+                    server = servers[i];
+                    break;
+                }
+            }
+            return server;
+        }
+        private bool check03(string shortversion, CheckState state)
+        {
+            if (state == CheckState.Indeterminate)
+                return true;
+            else if (state == CheckState.Checked)
+                if (string.IsNullOrEmpty(shortversion))
+                    return false;
+                else if (shortversion.StartsWith("0.3") || shortversion.StartsWith("0.4"))
+                    return true;
+                else return false;
+            else
+                if (string.IsNullOrEmpty(shortversion))
+                    return true;
+                else if (shortversion.StartsWith("0.3") || shortversion.StartsWith("0.4"))
+                    return false;
+                else return true;
         }
         #endregion
     }
