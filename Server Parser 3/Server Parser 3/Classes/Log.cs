@@ -84,13 +84,11 @@ namespace Server_Parser_3
 
             String text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) + " - " + caller + message;
 
-            Console.WriteLine(text);
-
             if (!MayWriteType(level))
             {
                 return;
             }
-
+            Console.WriteLine(text);
             _logWriter.WriteLine(text);
             _logWriter.Flush();
         }

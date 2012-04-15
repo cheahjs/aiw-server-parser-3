@@ -31,41 +31,43 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
-            this.toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
+            this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.progressBar = new System.Windows.Forms.ToolStripProgressBar();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.listViewServer = new System.Windows.Forms.ListView();
-            this.columnHeader1 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader2 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader3 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader4 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader7 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader5 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader7 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.listViewFav = new System.Windows.Forms.ListView();
-            this.columnHeader9 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader10 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader11 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader14 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader12 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader15 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader13 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader9 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader10 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader11 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader14 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader12 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader15 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader13 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
             this.splitContainer3 = new System.Windows.Forms.SplitContainer();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.listViewPlayers = new System.Windows.Forms.ListView();
-            this.columnHeader8 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader16 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader17 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader8 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader16 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader17 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.listViewDvars = new System.Windows.Forms.ListView();
-            this.columnHeader18 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader19 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader18 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader19 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.btnContinuous = new System.Windows.Forms.Button();
+            this.btnCrashAll = new System.Windows.Forms.Button();
             this.stopBtn = new System.Windows.Forms.Button();
             this.webBrowser1 = new System.Windows.Forms.WebBrowser();
             this.label4 = new System.Windows.Forms.Label();
@@ -87,7 +89,6 @@
             this.copyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.iPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hostNameToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.connectToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.addToFavouritesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchPlayerToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.rCONToolToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -96,11 +97,11 @@
             this.toolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem5 = new System.Windows.Forms.ToolStripMenuItem();
             this.addIPToFavouritesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.searchPlayerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.rCONToolToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.backgroundWorker2 = new System.ComponentModel.BackgroundWorker();
             this.statusStrip1.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -125,7 +126,7 @@
             // statusStrip1
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripStatusLabel1,
+            this.statusLabel,
             this.progressBar});
             this.statusStrip1.Location = new System.Drawing.Point(0, 340);
             this.statusStrip1.Name = "statusStrip1";
@@ -133,11 +134,11 @@
             this.statusStrip1.TabIndex = 0;
             this.statusStrip1.Text = "statusStrip1";
             // 
-            // toolStripStatusLabel1
+            // statusLabel
             // 
-            this.toolStripStatusLabel1.Name = "toolStripStatusLabel1";
-            this.toolStripStatusLabel1.Size = new System.Drawing.Size(146, 17);
-            this.toolStripStatusLabel1.Text = "Server list not retrieved yet";
+            this.statusLabel.Name = "statusLabel";
+            this.statusLabel.Size = new System.Drawing.Size(146, 17);
+            this.statusLabel.Text = "Server list not retrieved yet";
             // 
             // progressBar
             // 
@@ -200,9 +201,9 @@
             // listViewServer
             // 
             this.listViewServer.AllowColumnReorder = true;
-            this.listViewServer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.listViewServer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.listViewServer.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnHeader1,
             this.columnHeader2,
@@ -220,10 +221,10 @@
             this.listViewServer.TabIndex = 0;
             this.listViewServer.UseCompatibleStateImageBehavior = false;
             this.listViewServer.View = System.Windows.Forms.View.Details;
-            this.listViewServer.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listViewServer_MouseDoubleClick);
             this.listViewServer.SelectedIndexChanged += new System.EventHandler(this.listViewServer_SelectedIndexChanged);
-            this.listViewServer.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listViewServer_MouseDown);
             this.listViewServer.KeyDown += new System.Windows.Forms.KeyEventHandler(this.listViewServer_KeyDown);
+            this.listViewServer.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listViewServer_MouseDoubleClick);
+            this.listViewServer.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listViewServer_MouseDown);
             // 
             // columnHeader1
             // 
@@ -274,9 +275,9 @@
             // listViewFav
             // 
             this.listViewFav.AllowColumnReorder = true;
-            this.listViewFav.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.listViewFav.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.listViewFav.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnHeader9,
             this.columnHeader10,
@@ -294,10 +295,10 @@
             this.listViewFav.TabIndex = 1;
             this.listViewFav.UseCompatibleStateImageBehavior = false;
             this.listViewFav.View = System.Windows.Forms.View.Details;
-            this.listViewFav.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listViewFav_MouseDoubleClick);
             this.listViewFav.SelectedIndexChanged += new System.EventHandler(this.listViewFav_SelectedIndexChanged);
-            this.listViewFav.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listViewFav_MouseDown);
             this.listViewFav.KeyDown += new System.Windows.Forms.KeyEventHandler(this.listViewFav_KeyDown);
+            this.listViewFav.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listViewFav_MouseDoubleClick);
+            this.listViewFav.MouseDown += new System.Windows.Forms.MouseEventHandler(this.listViewFav_MouseDown);
             // 
             // columnHeader9
             // 
@@ -448,6 +449,8 @@
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.btnContinuous);
+            this.groupBox2.Controls.Add(this.btnCrashAll);
             this.groupBox2.Controls.Add(this.stopBtn);
             this.groupBox2.Controls.Add(this.webBrowser1);
             this.groupBox2.Controls.Add(this.label4);
@@ -473,6 +476,32 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "Filters";
             // 
+            // btnContinuous
+            // 
+            this.btnContinuous.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnContinuous.Enabled = false;
+            this.btnContinuous.Location = new System.Drawing.Point(9, 281);
+            this.btnContinuous.Name = "btnContinuous";
+            this.btnContinuous.Size = new System.Drawing.Size(159, 23);
+            this.btnContinuous.TabIndex = 21;
+            this.btnContinuous.Text = "Continuous Crash";
+            this.btnContinuous.UseVisualStyleBackColor = true;
+            this.btnContinuous.Visible = false;
+            this.btnContinuous.Click += new System.EventHandler(this.btnContinuous_Click);
+            // 
+            // btnCrashAll
+            // 
+            this.btnCrashAll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnCrashAll.Enabled = false;
+            this.btnCrashAll.Location = new System.Drawing.Point(9, 310);
+            this.btnCrashAll.Name = "btnCrashAll";
+            this.btnCrashAll.Size = new System.Drawing.Size(75, 23);
+            this.btnCrashAll.TabIndex = 20;
+            this.btnCrashAll.Text = "Crash All";
+            this.btnCrashAll.UseVisualStyleBackColor = true;
+            this.btnCrashAll.Visible = false;
+            this.btnCrashAll.Click += new System.EventHandler(this.btnCrashAll_Click);
+            // 
             // stopBtn
             // 
             this.stopBtn.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
@@ -497,8 +526,8 @@
             // 
             // label4
             // 
-            this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.label4.AutoSize = true;
             this.label4.Location = new System.Drawing.Point(6, 121);
             this.label4.Name = "label4";
@@ -508,8 +537,8 @@
             // 
             // playerFilter
             // 
-            this.playerFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.playerFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.playerFilter.Location = new System.Drawing.Point(80, 118);
             this.playerFilter.Name = "playerFilter";
             this.playerFilter.Size = new System.Drawing.Size(85, 20);
@@ -517,11 +546,12 @@
             // 
             // v03Filter
             // 
-            this.v03Filter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.v03Filter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.v03Filter.AutoSize = true;
             this.v03Filter.Checked = true;
             this.v03Filter.CheckState = System.Windows.Forms.CheckState.Indeterminate;
+            this.v03Filter.Enabled = false;
             this.v03Filter.Location = new System.Drawing.Point(9, 213);
             this.v03Filter.Name = "v03Filter";
             this.v03Filter.Size = new System.Drawing.Size(86, 17);
@@ -529,6 +559,7 @@
             this.v03Filter.Text = ">0.3 Servers";
             this.v03Filter.ThreeState = true;
             this.v03Filter.UseVisualStyleBackColor = true;
+            this.v03Filter.Visible = false;
             // 
             // refreshBtn
             // 
@@ -543,8 +574,8 @@
             // 
             // emptyFilter
             // 
-            this.emptyFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.emptyFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.emptyFilter.AutoSize = true;
             this.emptyFilter.Checked = true;
             this.emptyFilter.CheckState = System.Windows.Forms.CheckState.Checked;
@@ -557,8 +588,8 @@
             // 
             // fullFilter
             // 
-            this.fullFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.fullFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.fullFilter.AutoSize = true;
             this.fullFilter.Checked = true;
             this.fullFilter.CheckState = System.Windows.Forms.CheckState.Checked;
@@ -571,8 +602,8 @@
             // 
             // hcFilter
             // 
-            this.hcFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.hcFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.hcFilter.AutoSize = true;
             this.hcFilter.Checked = true;
             this.hcFilter.CheckState = System.Windows.Forms.CheckState.Indeterminate;
@@ -586,8 +617,8 @@
             // 
             // modFilter
             // 
-            this.modFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.modFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.modFilter.FormattingEnabled = true;
             this.modFilter.Location = new System.Drawing.Point(46, 91);
             this.modFilter.Name = "modFilter";
@@ -596,8 +627,8 @@
             // 
             // label5
             // 
-            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.label5.AutoSize = true;
             this.label5.Location = new System.Drawing.Point(6, 94);
             this.label5.Name = "label5";
@@ -607,8 +638,8 @@
             // 
             // typeFilter
             // 
-            this.typeFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.typeFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.typeFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.typeFilter.FormattingEnabled = true;
             this.typeFilter.Location = new System.Drawing.Point(80, 64);
@@ -618,8 +649,8 @@
             // 
             // label3
             // 
-            this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(6, 67);
             this.label3.Name = "label3";
@@ -629,8 +660,8 @@
             // 
             // label2
             // 
-            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.label2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(6, 42);
             this.label2.Name = "label2";
@@ -640,8 +671,8 @@
             // 
             // mapFilter
             // 
-            this.mapFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.mapFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.mapFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.mapFilter.FormattingEnabled = true;
             this.mapFilter.Location = new System.Drawing.Point(46, 39);
@@ -651,8 +682,8 @@
             // 
             // nameFilter
             // 
-            this.nameFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.nameFilter.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.nameFilter.Location = new System.Drawing.Point(87, 13);
             this.nameFilter.Name = "nameFilter";
             this.nameFilter.Size = new System.Drawing.Size(78, 20);
@@ -660,8 +691,8 @@
             // 
             // label1
             // 
-            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.label1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(6, 16);
             this.label1.Name = "label1";
@@ -673,12 +704,11 @@
             // 
             this.cmsServers.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.copyToolStripMenuItem,
-            this.connectToolStripMenuItem,
             this.addToFavouritesToolStripMenuItem,
             this.searchPlayerToolStripMenuItem1,
             this.rCONToolToolStripMenuItem});
             this.cmsServers.Name = "cmsServers";
-            this.cmsServers.Size = new System.Drawing.Size(168, 114);
+            this.cmsServers.Size = new System.Drawing.Size(168, 92);
             // 
             // copyToolStripMenuItem
             // 
@@ -702,13 +732,6 @@
             this.hostNameToolStripMenuItem.Size = new System.Drawing.Size(134, 22);
             this.hostNameToolStripMenuItem.Text = "Host Name";
             this.hostNameToolStripMenuItem.Click += new System.EventHandler(this.hostNameToolStripMenuItem_Click);
-            // 
-            // connectToolStripMenuItem
-            // 
-            this.connectToolStripMenuItem.Name = "connectToolStripMenuItem";
-            this.connectToolStripMenuItem.Size = new System.Drawing.Size(167, 22);
-            this.connectToolStripMenuItem.Text = "Connect";
-            this.connectToolStripMenuItem.Click += new System.EventHandler(this.connectToolStripMenuItem_Click);
             // 
             // addToFavouritesToolStripMenuItem
             // 
@@ -741,13 +764,12 @@
             // 
             this.cmsFav.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripMenuItem1,
-            this.toolStripMenuItem4,
             this.toolStripMenuItem5,
             this.addIPToFavouritesToolStripMenuItem,
             this.searchPlayerToolStripMenuItem,
             this.rCONToolToolStripMenuItem1});
             this.cmsFav.Name = "cmsServers";
-            this.cmsFav.Size = new System.Drawing.Size(204, 136);
+            this.cmsFav.Size = new System.Drawing.Size(204, 114);
             // 
             // toolStripMenuItem1
             // 
@@ -771,13 +793,6 @@
             this.toolStripMenuItem3.Size = new System.Drawing.Size(134, 22);
             this.toolStripMenuItem3.Text = "Host Name";
             this.toolStripMenuItem3.Click += new System.EventHandler(this.toolStripMenuItem3_Click);
-            // 
-            // toolStripMenuItem4
-            // 
-            this.toolStripMenuItem4.Name = "toolStripMenuItem4";
-            this.toolStripMenuItem4.Size = new System.Drawing.Size(203, 22);
-            this.toolStripMenuItem4.Text = "Connect";
-            this.toolStripMenuItem4.Click += new System.EventHandler(this.toolStripMenuItem4_Click);
             // 
             // toolStripMenuItem5
             // 
@@ -807,6 +822,11 @@
             this.rCONToolToolStripMenuItem1.Text = "RCON Tool";
             this.rCONToolToolStripMenuItem1.Click += new System.EventHandler(this.rCONToolToolStripMenuItem1_Click);
             // 
+            // backgroundWorker2
+            // 
+            this.backgroundWorker2.WorkerReportsProgress = true;
+            this.backgroundWorker2.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker2_DoWork);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -818,8 +838,8 @@
             this.MinimumSize = new System.Drawing.Size(700, 300);
             this.Name = "Form1";
             this.Text = "aIW Server Parser 3";
-            this.Load += new System.EventHandler(this.Form1_Load);
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
             this.splitContainer1.Panel1.ResumeLayout(false);
@@ -849,7 +869,7 @@
         #endregion
 
         private System.Windows.Forms.StatusStrip statusStrip1;
-        private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabel1;
+        private System.Windows.Forms.ToolStripStatusLabel statusLabel;
         private System.Windows.Forms.ToolStripProgressBar progressBar;
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.GroupBox groupBox1;
@@ -892,7 +912,6 @@
         private System.Windows.Forms.ToolStripMenuItem copyToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem iPToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hostNameToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem connectToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem addToFavouritesToolStripMenuItem;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.GroupBox groupBox4;
@@ -910,7 +929,6 @@
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem2;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem3;
-        private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem4;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem5;
         private System.Windows.Forms.WebBrowser webBrowser1;
         private System.Windows.Forms.ToolStripMenuItem addIPToFavouritesToolStripMenuItem;
@@ -919,6 +937,9 @@
         private System.Windows.Forms.ToolStripMenuItem searchPlayerToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem rCONToolToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem rCONToolToolStripMenuItem1;
+        private System.Windows.Forms.Button btnCrashAll;
+        private System.Windows.Forms.Button btnContinuous;
+        private System.ComponentModel.BackgroundWorker backgroundWorker2;
     }
 }
 

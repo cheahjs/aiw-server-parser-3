@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 11
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server Parser 3", "Server Parser 3\Server Parser 3.csproj", "{76920F62-B875-406C-B8D1-4FE51907E8E8}"
 EndProject
 Global
