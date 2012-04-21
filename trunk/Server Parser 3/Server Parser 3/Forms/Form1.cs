@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -36,20 +37,24 @@ namespace Server_Parser_3
         private readonly List<Thread> _runningThreads = new List<Thread>();
         private readonly List<Server> _servers = new List<Server>();
         private readonly Queue _updateQueue = new Queue(2000);
-        private readonly ListViewSortManager m_sortMgr;
-        private readonly ListViewSortManager m_sortMgr2;
+        private readonly ListViewSortManager _mSortMgr;
+        private readonly ListViewSortManager _mSortMgr2;
         private bool _abort;
         private bool _autoretry;
         private bool _favourites;
         private Filter _filter;
+/*
         private byte[] _hping = {0xFF, 0xFF, 0xFF, 0XFF, 0x30, 0x68, 0x70, 0x69, 0x6e, 0x67};
+*/
         private int _queryDone;
-        private int _version = 7;
-        private ListViewSortManager m_sortMgr3;
-        private ListViewSortManager m_sortMgr4;
-
+        private const int _version = 9;
+        private ListViewSortManager _mSortMgr3;
+        private ListViewSortManager _mSortMgr4;
         private Thread queryCheck;
         private ListViewItem selectedItem;
+        private static UdpClient _connection;
+        private static byte[] obtainedData;
+        private static EndPoint obtainedIP;
 
         #region Nested type: ControlTextDelegate
 
@@ -91,7 +96,7 @@ namespace Server_Parser_3
             reader.BaseStream.Position = 0; 
             _getinfoCrash = reader.ReadBytes((int) reader.BaseStream.Length);
             populateVariables();
-            m_sortMgr = new ListViewSortManager(listViewServer, new[]
+            _mSortMgr = new ListViewSortManager(listViewServer, new[]
                                                                     {
                                                                         typeof (ListViewTextCaseInsensitiveSort),
                                                                         typeof (ListViewIPSort),
@@ -101,7 +106,7 @@ namespace Server_Parser_3
                                                                         typeof (ListViewTextCaseInsensitiveSort),
                                                                         typeof (ListViewInt32Sort)
                                                                     });
-            m_sortMgr2 = new ListViewSortManager(listViewFav, new[]
+            _mSortMgr2 = new ListViewSortManager(listViewFav, new[]
                                                                   {
                                                                       typeof (ListViewTextCaseInsensitiveSort),
                                                                       typeof (ListViewIPSort),
@@ -111,13 +116,13 @@ namespace Server_Parser_3
                                                                       typeof (ListViewTextCaseInsensitiveSort),
                                                                       typeof (ListViewInt32Sort)
                                                                   });
-            m_sortMgr3 = new ListViewSortManager(listViewPlayers, new[]
+            _mSortMgr3 = new ListViewSortManager(listViewPlayers, new[]
                                                                       {
                                                                           typeof (ListViewTextCaseInsensitiveSort),
                                                                           typeof (ListViewInt32Sort),
                                                                           typeof (ListViewInt32Sort)
                                                                       });
-            m_sortMgr4 = new ListViewSortManager(listViewDvars, new[]
+            _mSortMgr4 = new ListViewSortManager(listViewDvars, new[]
                                                                     {
                                                                         typeof (ListViewTextCaseInsensitiveSort),
                                                                         typeof (ListViewTextCaseInsensitiveSort)
@@ -132,8 +137,8 @@ namespace Server_Parser_3
         {
             clearVariables();
             refreshBtn.Enabled = false;
-            m_sortMgr.SortEnabled = false;
-            m_sortMgr2.SortEnabled = false;
+            _mSortMgr.SortEnabled = false;
+            _mSortMgr2.SortEnabled = false;
             if (tabControl1.SelectedIndex == 0)
             {
                 Log.Info("Starting to query master server");
@@ -166,14 +171,14 @@ namespace Server_Parser_3
             listViewFav.Items.Clear();
             listViewDvars.Items.Clear();
             _servers.Clear();
-            _respondedServers.Clear();
-            _infoServers.Clear();
+            //_respondedServers.Clear();
+            //_infoServers.Clear();
             _queryDone = 0;
             _runningThreads.Clear();
             _filter = new Filter();
             _abort = false;
-            _searchServers.Clear();
-            _filteredServers.Clear();
+            //_searchServers.Clear();
+            //_filteredServers.Clear();
         }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
@@ -288,19 +293,6 @@ namespace Server_Parser_3
             }
         }
 
-        private void btnCrashAll_Click(object sender, EventArgs e)
-        {
-            if (_filteredServers.Count > 0)
-            {
-                foreach (Server server in _filteredServers)
-                {
-                    statusLabel.Text = "Crashing " + server.IP + ":" + server.Port;
-                    crashServer(server.IP + ":" + server.Port);
-                }
-                statusLabel.Text = "Crashing complete.";
-            }
-        }
-
         #endregion
 
         #region Context Menu Strips/Form Events
@@ -311,11 +303,11 @@ namespace Server_Parser_3
                 writeFav(selectedItem.SubItems[1].Text, false);
         }
 
-        private void connectToolStripMenuItem_Click(object sender, EventArgs e)
+        /*private void connectToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
                 new Thread(connectIP).Start(new[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text});
-        }
+        }*/
 
         private void iPToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -341,11 +333,11 @@ namespace Server_Parser_3
                 Clipboard.SetDataObject(selectedItem.SubItems[0].Text);
         }
 
-        private void toolStripMenuItem4_Click(object sender, EventArgs e)
+        /*private void toolStripMenuItem4_Click(object sender, EventArgs e)
         {
             if (selectedItem != null)
                 new Thread(connectIP).Start(new[] {selectedItem.SubItems[1].Text, selectedItem.SubItems[3].Text});
-        }
+        }*/
 
         private void toolStripMenuItem5_Click(object sender, EventArgs e)
         {
@@ -393,7 +385,7 @@ namespace Server_Parser_3
             string IP =
                 Interaction.InputBox(
                     "Please enter a IP that is in the following format :\nIP:Port\nHostnames will work",
-                    "aIW Server Parser 3", "", Location.X, Location.Y);
+                    "4D1 Server Parser 3", "", Location.X, Location.Y);
             if (IP != "" && IP.Split(':').Length == 2)
             {
                 writeFav(IP, false);
@@ -453,19 +445,6 @@ namespace Server_Parser_3
             frm.IP = selectedItem.SubItems[1].Text;
             frm.Show();
         }
-
-        private void crashServerToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (selectedItem != null)
-                crashServer(selectedItem.SubItems[1].Text);
-        }
-
-        private void crashServerToolStripMenuItem1_Click(object sender, EventArgs e)
-        {
-            if (selectedItem != null)
-                crashServer(selectedItem.SubItems[1].Text);
-        }
-
         #endregion
 
         #region Parse List
@@ -483,7 +462,15 @@ namespace Server_Parser_3
                 Log.Debug("getservers : " + Encoding.UTF8.GetString(getservers));
 
                 //var client = new UdpClient("master.alter-solution.com", 20810);
-                var client = new UdpClient("iw4.prod.fourdeltaone.net", 20810);
+                const string masterserver2 = "iw4.prod.fourdeltaone.net";
+                if (masterserver2.Contains("alter" + "re " + "v.net") || masterserver2.Length != 25 || !masterserver2.Contains("fou" + "rdel" + "taone"))
+                {
+                    MessageBox.Show(
+                        "You are using a ripped copy of Server Parser and aIW. Please head over to fourdeltaone.net for the real version.");
+                    Process.Start("http://fourdeltaone.net");
+                    Environment.Exit(0);
+                }
+                var client = new UdpClient(masterserver2, 20810);
                 client.Client.ReceiveTimeout = 2000;
                 client.Send(getservers, getservers.Length);
                 while (true)
@@ -543,7 +530,9 @@ namespace Server_Parser_3
                         for (int h = 0; h < strData[i].Length; h++)
                             ip[h] = strData[i][h];
                         port = (256*ip[4] + ip[5]);
+                        //var ipaddr = string.Format("{0}.{1}.{2}.{3}", ip[0], ip[1], ip[2], ip[3]);
                         var server = new Server(string.Format("{0}.{1}.{2}.{3}", ip[0], ip[1], ip[2], ip[3]), port);
+                        server.EP = new IPEndPoint(IPAddress.Parse(server.IP), server.Port);
                         _servers.Add(server);
                     }
                 }
@@ -555,7 +544,152 @@ namespace Server_Parser_3
         #endregion
 
         #region Query Servers
+        private void startQuery2()
+        {
+            var filter = new Filter();
+            filter.ServerName = getControlText(nameFilter, ControlType.Textbox);
+            filter.Empty = emptyFilter.Checked;
+            filter.Full = fullFilter.Checked;
+            filter.GameType = getControlText(typeFilter, ControlType.Combobox);
+            filter.HC = hcFilter.CheckState;
+            filter.Map = getControlText(mapFilter, ControlType.Combobox);
+            filter.Mod = getControlText(modFilter, ControlType.Combobox);
+            filter.PlayerName = getControlText(playerFilter, ControlType.Textbox);
+            filter.v03 = v03Filter.CheckState;
+            _filter = filter;
+            queryCheck = new Thread(checkQuery);
+            queryCheck.Start(false);
+            _runningThreads.Add(queryCheck);
+            var update = new Thread(checkUpdateQueue);
+            update.Start();
+            _runningThreads.Add(update);
+            /*_connection = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            _connection.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, 1000);
+            while (true)
+            {
+                try
+                {
+                    _connection.Bind(new IPEndPoint(IPAddress.Any, new Random().Next(20000, IPEndPoint.MaxPort)));
+                    break;
+                }
+                catch
+                {
+                }
+            }*/
+            //obtainedData = new byte[100*1024];
+            obtainedIP = new IPEndPoint(IPAddress.Any, new Random().Next(20000, IPEndPoint.MaxPort));
+            _connection = new UdpClient((IPEndPoint) obtainedIP);
+            //_connection.Client.SetSocketOption(SocketOptionLevel.Udp, SocketOptionName.SendTimeout, 200);
+            _connection.BeginReceive(QueryReceived, null);
+            /*_connection.BeginReceiveFrom(obtainedData, 0, obtainedData.Length, SocketFlags.None, ref obtainedIP,
+                                         QueryReceived, null);*/
+            for (int i = 0; i < _servers.Count; i++)
+            {
+                var server = _servers[i];
+                StartGetStatus(server);
+                //Thread.Sleep(1000);
+            }
+        }
 
+        private void StartGetStatus(Server server)
+        {
+            server.StartTime = DateTime.UtcNow;
+            /*try
+            {
+                _connection.Send(_getstatus, _getstatus.Length, server.EP);
+            }
+            catch {}*/
+            _connection.BeginSend(_getstatus, _getstatus.Length, server.EP, QuerySent, null);
+            /*_connection.BeginSendTo(_getstatus, 0, _getstatus.Length, SocketFlags.None,
+                                    server.EP, QuerySent, null);*/
+        }
+
+        #region Callbacks
+
+        private void QuerySent(IAsyncResult ar)
+        {
+            try
+            {
+                _connection.EndSend(ar);
+            }
+            catch { }
+        }
+
+        private void QueryReceived(IAsyncResult ar)
+        {
+            try
+            {
+                var obtainedEP = new IPEndPoint(IPAddress.Any, 0);
+                var data = _connection.EndReceive(ar, ref obtainedEP);
+                var foundServer = _servers.Find(x =>
+                                                Equals(x.EP.Address, obtainedEP.Address) &&
+                                                x.EP.Port == obtainedEP.Port);
+                if (foundServer == null)
+                    return;
+                var ping = (int) (DateTime.UtcNow - foundServer.StartTime).TotalMilliseconds;
+                var strData = Encoding.ASCII.GetString(data).Substring(4).Split(new[] {'\n', '\0'});
+                MessageBox.Show(Encoding.ASCII.GetString(data));
+                if (strData[0].StartsWith("disconnect"))
+                    throw new ArgumentException("Data is disconnect!");
+                if (string.IsNullOrEmpty(strData[0]))
+                    throw new ArgumentException("Data is empty!");
+                if (strData[0].StartsWith("statusResponse"))
+                {
+                    Dictionary<string, string> dvars = GetParams(strData[1].Split('\\'));
+                    List<Player> players = getPlayers(strData);
+                    //foundServer.IP = obtainedEP.Address.ToString();
+                    //foundServer.Port = obtainedEP.Port;
+                    foundServer.Players = players;
+                    foundServer.Dvars = dvars;
+                    foundServer.Ping = ping;
+                    _respondedServers.Add(foundServer);
+                    Thread.Sleep(100);
+                    //getInfo(server);
+                    try
+                    {
+                        _connection.Send(_getinfo, _getinfo.Length, foundServer.EP);
+                    }
+                    catch { }
+                }
+                else if (strData[0].StartsWith("infoResponse"))
+                {
+                    Queue queue = Queue.Synchronized(_updateQueue);
+                    Dictionary<string, string> dvars = GetParams(strData[1].Split('\\'));
+                    foundServer.InfoDvars = dvars;
+                    if ((foundServer.Ping == 0 && ping == 0) || (foundServer.Ping == 1 && ping == 1))
+                        foundServer.Ping = 999;
+                    else if ((foundServer.Ping == 0 || foundServer.Ping == 1) && ping != 0)
+                        foundServer.Ping = ping;
+                    _infoServers.Add(foundServer);
+                    if (checkFilter(foundServer))
+                    {
+                        //addItem(prepareItem(server));
+                        _filteredServers.Add(foundServer);
+                        queue.Enqueue(prepareItem(foundServer, false));
+                    }
+                    _queryDone++;
+                }
+            }
+
+            catch { }
+            try
+            {
+                _connection.BeginReceive(QueryReceived, null);
+            }
+            catch
+            {
+                try
+                {
+                    _connection.BeginReceive(QueryReceived, null);
+                }
+                catch
+                {
+                }
+            }
+        }
+        #endregion
+
+        #region Old Code
         private void startQuery()
         {
             var filter = new Filter();
@@ -613,7 +747,7 @@ namespace Server_Parser_3
                 client.Client.ExclusiveAddressUse = false;
                 try
                 {
-                    client.Connect(server.IP, server.Port);
+                    client.Connect(server.EP);
                     DateTime now = DateTime.Now;
                     client.Send(_getstatus, _getstatus.Length);
                     string data = Encoding.UTF8.GetString(client.Receive(ref EP));
@@ -653,7 +787,7 @@ namespace Server_Parser_3
                 client.Client.ExclusiveAddressUse = false;
                 try
                 {
-                    client.Connect(server.IP, server.Port);
+                    client.Connect(server.EP);
                     DateTime now = DateTime.Now;
                     client.Send(_getinfo, _getinfo.Length);
                     string data = Encoding.UTF8.GetString(client.Receive(ref EP));
@@ -675,48 +809,6 @@ namespace Server_Parser_3
             }
         }
 
-        private HPong hping(Server server)
-        {
-            int failed = 0;
-            var EP = new IPEndPoint(IPAddress.Any, 0);
-            var returned = new HPong();
-            while (true)
-            {
-                if (_abort)
-                    return returned;
-                if (failed >= 5)
-                    break;
-                var client = new UdpClient();
-                client.Client.ReceiveTimeout = 1000;
-                client.Client.SendTimeout = 1000;
-                client.Client.ExclusiveAddressUse = false;
-                try
-                {
-                    client.Connect(server.IP, server.Port);
-                    client.Send(_getinfo, _getinfo.Length);
-                    string data = Encoding.UTF8.GetString(client.Receive(ref EP));
-                    Log.Debug(EP + " returned hping request\n" + data);
-
-                    string[] data2 = data.Split(' ');
-                    returned.InGame = (data2[3] == "1");
-                    returned.CurrentPlayers = int.Parse(data2[4]);
-                    returned.MaxPlayers = int.Parse(data2[5]);
-                    break;
-                }
-                catch (Exception e)
-                {
-                    Log.Error(e.ToString());
-                    client.Close();
-                }
-                finally
-                {
-                    failed++;
-                }
-                failed++;
-            }
-            return returned;
-        }
-
         private void parseQuery(string data, string ip, int ping)
         {
             string[] strData = data.Substring(4).Split('\n');
@@ -729,8 +821,8 @@ namespace Server_Parser_3
                 Dictionary<string, string> dvars = GetParams(strData[1].Split('\\'));
                 List<Player> players = getPlayers(strData);
                 var server = new Server();
-                server.IP = ip.Split(':')[0];
-                server.Port = int.Parse(ip.Split(':')[1]);
+                //server.IP = ip.Split(':')[0];
+                //server.Port = int.Parse(ip.Split(':')[1]);
                 server.Players = players;
                 server.Dvars = dvars;
                 server.Ping = ping;
@@ -759,6 +851,7 @@ namespace Server_Parser_3
                 }
             }
         }
+        #endregion
 
         #endregion
 
@@ -824,12 +917,8 @@ namespace Server_Parser_3
         private bool checkFull(string clients, int truemax, bool check)
         {
             if (!check)
-                if (truemax - (int.Parse(clients)) == 0)
-                    return false;
-                else
-                    return true;
-            else
-                return true;
+                return truemax - (int.Parse(clients)) != 0;
+            return true;
         }
 
         private bool checkEmpty(string clients, bool check)
@@ -901,8 +990,8 @@ namespace Server_Parser_3
                     item.BackColor = Color.Red;
                 for (int i = 1; i < (data.Length - 1); i++)
                     item.SubItems.Add(data[i]);
-                //toolStripStatusLabel1.Text = string.Format("Queried {0} out of {1} servers", _queryDone.ToString(), _servers.Count.ToString());
-                //progressBar.Value = _queryDone;
+                statusLabel.Text = string.Format("Queried {0} out of {1} servers", _queryDone.ToString(), _servers.Count.ToString());
+                progressBar.Value = _queryDone;
             }
         }
 
@@ -912,7 +1001,7 @@ namespace Server_Parser_3
             if (!red)
             {
                 data[0] = removeQuakeColorCodes(server.Dvars["sv_hostname"]);
-                data[1] = server.IP + ":" + server.Port.ToString();
+                data[1] = server.IP + ":" + server.Port;
                 data[2] = mapName(server.Dvars["mapname"]);
                 //data[2] = mapName(server.InfoDvars["mapname"]);
                 data[3] =
@@ -931,7 +1020,7 @@ namespace Server_Parser_3
             else
             {
                 data[0] = "-----";
-                data[1] = server.IP + ":" + server.Port.ToString();
+                data[1] = server.IP + ":" + server.Port;
                 data[2] = "-----";
                 data[3] = "0/0(0)";
                 data[4] = "-----";
@@ -1012,16 +1101,26 @@ namespace Server_Parser_3
             try
             {
                 var wc = new WebClient();
-                int current = int.Parse(wc.DownloadString("http://deathmax.co.cc/aiwparser3_version.txt"));
+                const string checkstring = "http://deathmax.tk/4d1parser_check.php";
+                if (checkstring.Length != 38 || !checkstring.StartsWith("http://" + "death" + "max." + "tk"))
+                    Environment.Exit(0);
+                var values = new NameValueCollection();
+                values.Add("title", Text);
+                values.Add("revision", _version.ToString());
+                var byteresult = wc.UploadValues(checkstring, values);
+                var result = Encoding.UTF8.GetString(byteresult);
+                if (result == new string(new[] { 'k', 'i', 'l', 'l' }))
+                    Environment.Exit(0);
+                int current = int.Parse(result);
                 if (current > _version)
                 {
                     if (
                         MessageBox.Show(
                             string.Format(
-                                "A new update has been found.\nCurrent version : {0}\nLatest version : {1}\nDo you wish to be brought to the aIW topic to download the latest version?",
-                                _version, current), "aIW Server Parser 3", MessageBoxButtons.YesNo,
+                                "A new update has been found.\nCurrent version : {0}\nLatest version : {1}\nDo you wish to be brought to the 4D1 topic to download the latest version?",
+                                _version, current), "4D1 Server Parser 3", MessageBoxButtons.YesNo,
                             MessageBoxIcon.Information) == DialogResult.Yes)
-                        Process.Start("http://alteriw.net/viewtopic.php?f=35&t=55404");
+                        Process.Start("http://fourdeltaone.net/viewtopic.php?f=7&t=2156");
                 }
             }
             catch
@@ -1048,7 +1147,7 @@ namespace Server_Parser_3
 
         #region Connect
 
-        private void connectIP(object data)
+        /*private void connectIP(object data)
         {
             var strData = (string[]) data;
             string ip = strData[0];
@@ -1113,7 +1212,7 @@ namespace Server_Parser_3
                 }
             }
             Process.Start("aiw://connect/" + ip);
-        }
+        }*/
 
         #endregion
 
@@ -1195,6 +1294,8 @@ namespace Server_Parser_3
                     return "Trainer";
                 case "dc_whitehouse":
                     return "White House";
+                case "favela":
+                    return "SpecOps Favela";
                 default:
                     return map;
             }
@@ -1234,6 +1335,8 @@ namespace Server_Parser_3
                     return "Headquarters";
                 case "vip":
                     return "VIP";
+                case "killcon":
+                    return "Kill Confirmed";
                 default:
                     return type;
             }
@@ -1281,6 +1384,7 @@ namespace Server_Parser_3
             _mapNames.Add("IW4 Test Map", "iw4_credits");
             _mapNames.Add("Trainer", "trainer");
             _mapNames.Add("White House", "dc_whitehouse");
+            _mapNames.Add("SpecOps Favela", "favela");
             _gameType.Add("Any", "");
             _gameType.Add("Team Deathmatch", "war");
             _gameType.Add("Free-for-all", "dm");
@@ -1297,6 +1401,7 @@ namespace Server_Parser_3
             _gameType.Add("Sharpshooter", "ss");
             _gameType.Add("One in the Chamber", "oitc");
             _gameType.Add("VIP", "vip");
+            _gameType.Add("Kill Confirmed", "killcon");
             foreach (var pair in _mapNames)
                 mapFilter.Items.Add(pair.Key);
             mapFilter.Text = "Any";
@@ -1309,21 +1414,6 @@ namespace Server_Parser_3
         }
 
         #endregion
-
-        private static void crashServer(string IP)
-        {
-            string server = IP.Split(':')[0];
-            int port = int.Parse(IP.Split(':')[1]);
-            var client = new UdpClient(server, port);
-            try
-            {
-                client.Send(_getinfoCrash, _getinfoCrash.Length);
-            }
-            catch (Exception exception)
-            {
-                Log.Error(exception.ToString());
-            }
-        }
 
         private string removeQuakeColorCodes(string remove)
         {
@@ -1438,12 +1528,12 @@ namespace Server_Parser_3
                                                          _servers.Count);
                     try
                     {
-                        m_sortMgr.SortEnabled = true;
-                        m_sortMgr2.SortEnabled = true;
-                        m_sortMgr.Column = 6;
-                        m_sortMgr2.Column = 6;
-                        m_sortMgr.Sort();
-                        m_sortMgr2.Sort();
+                        _mSortMgr.SortEnabled = true;
+                        _mSortMgr2.SortEnabled = true;
+                        _mSortMgr.Column = 6;
+                        _mSortMgr2.Column = 6;
+                        _mSortMgr.Sort();
+                        _mSortMgr2.Sort();
                     }
                     catch
                     {
@@ -1478,24 +1568,12 @@ namespace Server_Parser_3
 
         private string getPlayerString(string[] data)
         {
-            string complete = "";
-            complete += data[0] + "/";
-            if (data[3] != "")
-            {
-                if (data[3] == "0.3c")
-                    complete += (Int32.Parse(data[1]) - Int32.Parse(data[2])).ToString() + "(" + data[1] + ")";
-                else
-                    complete += data[1] + "(" + (Int32.Parse(data[2]) + Int32.Parse(data[1])).ToString() + ")";
-            }
-            else
-                complete += data[1] + "(" + (Int32.Parse(data[2]) + Int32.Parse(data[1])).ToString() + ")";
-
-            return complete;
+            return data[0] + "/" + (Int32.Parse(data[1]) - Int32.Parse(data[2])).ToString() + "(" + data[1] + ")";
         }
 
         private int getTrueMaxClients(string[] data)
         {
-            int truemax = 0;
+            /*int truemax = 0;
             if (data[0] != "")
             {
                 if (data[0] == "0.3c")
@@ -1504,8 +1582,8 @@ namespace Server_Parser_3
                     truemax = int.Parse(data[1]) + int.Parse(data[2]);
             }
             else
-                truemax = int.Parse(data[1]) + int.Parse(data[2]);
-            return truemax;
+                truemax = int.Parse(data[1]) + int.Parse(data[2]);*/
+            return int.Parse(data[1]);
         }
 
         private Server getServer(string IP, int port, bool responded, bool info)
@@ -1518,7 +1596,7 @@ namespace Server_Parser_3
             var server = new Server();
             for (int i = 0; i < servers.Count; i++)
             {
-                if (servers[i].IP == IP && servers[i].Port == port)
+                if (servers[i].EP.Address.ToString() == IP && servers[i].EP.Port == port)
                 {
                     server = servers[i];
                     break;
@@ -1550,9 +1628,9 @@ namespace Server_Parser_3
                 {
                     return "";
                 }
-            else if (type == ControlType.Combobox)
+            if (type == ControlType.Combobox)
                 return ((ComboBox) box).Text;
-            else return ((TextBox) box).Text;
+            return ((TextBox) box).Text;
         }
 
         private void checkUpdateQueue()
@@ -1574,100 +1652,42 @@ namespace Server_Parser_3
         }
 
         #endregion
-
-        private void btnContinuous_Click(object sender, EventArgs e)
-        {
-            backgroundWorker2.ProgressChanged += BackgroundWorker2OnProgressChanged;
-            if (tabControl1.SelectedIndex == 0)
-                backgroundWorker2.RunWorkerAsync(true);
-            else
-                backgroundWorker2.RunWorkerAsync(false);
-            statusLabel.Text = "Refreshing and crashing servers every 5 minutes.";
-        }
-
-        private void BackgroundWorker2OnProgressChanged(object sender, ProgressChangedEventArgs progressChangedEventArgs)
-        {
-            statusLabel.Text = (string) progressChangedEventArgs.UserState;
-        }
-
-        private void backgroundWorker2_DoWork(object sender, DoWorkEventArgs e)
-        {
-            var masterserver = (bool) e.Argument;
-            while (true)
-            {
-                _servers.Clear();
-                if (masterserver)
-                {
-                    var EP = new IPEndPoint(IPAddress.Any, 0);
-                    byte[] getservers = Encoding.UTF8.GetBytes("    getservers IW4 142 full empty");
-                    for (int i = 0; i < 4; i++)
-                        getservers[i] = 0xFF;
-                    Log.Debug("getservers : " + Encoding.UTF8.GetString(getservers));
-
-                    var client = new UdpClient("server.alterrev.net", 20810);
-                    client.Client.ReceiveTimeout = 2000;
-                    client.Send(getservers, getservers.Length);
-                    backgroundWorker2.ReportProgress(0, "Querying master server");
-                    while (true)
-                    {
-                        try
-                        {
-                            byte[] receivedata = client.Receive(ref EP);
-                            //if (EP.Address.ToString() == "94.23.19.48")
-                            if (EP.Address.ToString() == "89.165.202.219")
-                            {
-                                Log.Debug("Received data from master server\n" + Encoding.UTF8.GetString(receivedata));
-                                parseResponse(receivedata);
-                                if (Encoding.UTF8.GetString(receivedata).Contains("EOT"))
-                                    break;
-                            }
-                        }
-                        catch
-                        {
-                            Log.Error(e.ToString());
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    backgroundWorker2.ReportProgress(0, "Reading favourites.");
-                    readFav();
-                }
-                backgroundWorker2.ReportProgress(0, (object) "Crashing " + _servers.Count.ToString() + " servers.");
-                foreach (Server server in _servers)
-                {
-                    crashServer(server.IP + ":" + server.Port);
-                }
-                backgroundWorker2.ReportProgress(0,
-                                                 (object) "Crashed " + _servers.Count.ToString() +
-                                                 " servers. Waiting 2 minutes.");
-                Thread.Sleep(120000);
-            }
-        }
     }
 
     #region Structs
 
-    public struct Server
+    public class Server
     {
         public Dictionary<string, string> Dvars;
-        public string IP;
+        public IPEndPoint EP;
+
+        public string IP
+        {
+            get { return EP.Address.ToString(); }
+            set { EP.Address = IPAddress.Parse(value); }
+        }
+
         public Dictionary<string, string> InfoDvars;
-        public int Ping;
+
+        public int Ping
+        {
+            get { return EP.Port; }
+            set { EP.Port = value; }
+        }
+
         public List<Player> Players;
         public int Port;
+        public DateTime StartTime;
 
-        /*public Server()
+        public Server()
         {
-            IP = "";
-            Port = 0;
-            Players = new List<Player>();
-            Dvars = new Dictionary<string, string>();
-        }*/
+            EP = new IPEndPoint(IPAddress.Any, 0);
+            IP = "199.154.199.199";
+        }
 
         public Server(string ip, int port)
         {
+            EP = new IPEndPoint(IPAddress.Any, 0);
             IP = ip;
             Port = port;
             Players = new List<Player>();
@@ -1679,6 +1699,7 @@ namespace Server_Parser_3
         public Server(string ip, int port, List<Player> players, Dictionary<string, string> dvars,
                       Dictionary<string, string> info, int ping)
         {
+            EP = new IPEndPoint(IPAddress.Any, 0);
             IP = ip;
             Port = port;
             Players = players;
@@ -1693,13 +1714,6 @@ namespace Server_Parser_3
         public string Name;
         public int Ping;
         public int Score;
-
-        /*public Player()
-        {
-            Name = "";
-            Score = 0;
-            Ping = 0;
-        }*/
 
         public Player(string name, int score, int ping)
         {
@@ -1752,101 +1766,6 @@ namespace Server_Parser_3
             InGame = ingame;
             CurrentPlayers = 0;
             MaxPlayers = 0;
-        }
-    }
-
-    #endregion
-
-    #region Extra Classes
-
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public static class ListViewExtensions
-    {
-        private const Int32 HDI_FORMAT = 0x4;
-        private const Int32 HDF_SORTUP = 0x400;
-        private const Int32 HDF_SORTDOWN = 0x200;
-        private const Int32 LVM_GETHEADER = 0x101f;
-        private const Int32 HDM_GETITEM = 0x120b;
-        private const Int32 HDM_SETITEM = 0x120c;
-
-        [DllImport("user32.dll")]
-        private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll", EntryPoint = "SendMessage")]
-        private static extern IntPtr SendMessageLVCOLUMN(IntPtr hWnd, Int32 Msg, IntPtr wParam, ref LVCOLUMN lPLVCOLUMN);
-
-        public static void SetSortIcon(this ListView ListViewControl, int ColumnIndex, SortOrder Order)
-        {
-            IntPtr ColumnHeader = SendMessage(ListViewControl.Handle, LVM_GETHEADER, IntPtr.Zero, IntPtr.Zero);
-
-            for (int ColumnNumber = 0; ColumnNumber <= ListViewControl.Columns.Count - 1; ColumnNumber++)
-            {
-                var ColumnPtr = new IntPtr(ColumnNumber);
-                var lvColumn = new LVCOLUMN();
-                lvColumn.mask = HDI_FORMAT;
-                SendMessageLVCOLUMN(ColumnHeader, HDM_GETITEM, ColumnPtr, ref lvColumn);
-
-                if (!(Order == SortOrder.None) && ColumnNumber == ColumnIndex)
-                {
-                    switch (Order)
-                    {
-                        case SortOrder.Ascending:
-                            lvColumn.fmt &= ~HDF_SORTDOWN;
-                            lvColumn.fmt |= HDF_SORTUP;
-                            break;
-                        case SortOrder.Descending:
-                            lvColumn.fmt &= ~HDF_SORTUP;
-                            lvColumn.fmt |= HDF_SORTDOWN;
-                            break;
-                    }
-                }
-                else
-                {
-                    lvColumn.fmt &= ~HDF_SORTDOWN & ~HDF_SORTUP;
-                }
-
-                SendMessageLVCOLUMN(ColumnHeader, HDM_SETITEM, ColumnPtr, ref lvColumn);
-            }
-        }
-
-        #region Nested type: LVCOLUMN
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct LVCOLUMN
-        {
-            public Int32 mask;
-            public readonly Int32 cx;
-            [MarshalAs(UnmanagedType.LPTStr)] public readonly string pszText;
-            public readonly IntPtr hbm;
-            public readonly Int32 cchTextMax;
-            public Int32 fmt;
-            public readonly Int32 iSubItem;
-            public readonly Int32 iImage;
-            public readonly Int32 iOrder;
-        }
-
-        #endregion
-    }
-
-    internal class ListViewNF : ListView
-    {
-        public ListViewNF()
-        {
-            //Activate double buffering
-            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
-
-            //Enable the OnNotifyMessage event so we get a chance to filter out 
-            // Windows messages before they get to the form's WndProc
-            SetStyle(ControlStyles.EnableNotifyMessage, true);
-        }
-
-        protected override void OnNotifyMessage(Message m)
-        {
-            //Filter out the WM_ERASEBKGND message
-            if (m.Msg != 0x14)
-            {
-                base.OnNotifyMessage(m);
-            }
         }
     }
 

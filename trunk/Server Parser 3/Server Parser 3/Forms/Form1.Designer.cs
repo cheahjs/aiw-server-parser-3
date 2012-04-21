@@ -487,7 +487,7 @@
             this.btnContinuous.Text = "Continuous Crash";
             this.btnContinuous.UseVisualStyleBackColor = true;
             this.btnContinuous.Visible = false;
-            this.btnContinuous.Click += new System.EventHandler(this.btnContinuous_Click);
+            //this.btnContinuous.Click += new System.EventHandler(this.btnContinuous_Click);
             // 
             // btnCrashAll
             // 
@@ -500,7 +500,7 @@
             this.btnCrashAll.Text = "Crash All";
             this.btnCrashAll.UseVisualStyleBackColor = true;
             this.btnCrashAll.Visible = false;
-            this.btnCrashAll.Click += new System.EventHandler(this.btnCrashAll_Click);
+            //this.btnCrashAll.Click += new System.EventHandler(this.btnCrashAll_Click);
             // 
             // stopBtn
             // 
@@ -825,7 +825,7 @@
             // backgroundWorker2
             // 
             this.backgroundWorker2.WorkerReportsProgress = true;
-            this.backgroundWorker2.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker2_DoWork);
+            //this.backgroundWorker2.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker2_DoWork);
             // 
             // Form1
             // 
@@ -837,7 +837,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MinimumSize = new System.Drawing.Size(700, 300);
             this.Name = "Form1";
-            this.Text = "aIW Server Parser 3";
+            this.Text = "4D1 Server Parser 3";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.statusStrip1.ResumeLayout(false);
