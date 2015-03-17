@@ -1,0 +1,1 @@
+A server list that was made for aIW's dedicated servers.
